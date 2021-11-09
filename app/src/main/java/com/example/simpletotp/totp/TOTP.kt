@@ -30,6 +30,12 @@ class TOTP(private val pin: String) {
         // TODO: implement file reading and decryption
     }
 
+
+
+    /**
+     * ========TOTP PROTOCOL CODE========
+     */
+
     /**
      * This method uses the JCE to provide the crypto algorithm. HMAC computes a
      * Hashed Message Authentication Code with the crypto hash algorithm as a
