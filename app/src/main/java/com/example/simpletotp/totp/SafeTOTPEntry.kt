@@ -6,6 +6,5 @@ package com.example.simpletotp.totp
 data class SafeTOTPEntry(
     val id: String,
     var name: String,
-    val crypto: String = "HmacSHA1",
     var favorite: Boolean = false
 )

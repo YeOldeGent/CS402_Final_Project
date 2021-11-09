@@ -1,5 +1,7 @@
 package com.example.simpletotp.totp
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import java.lang.reflect.UndeclaredThrowableException
 import java.math.BigInteger
 import java.security.GeneralSecurityException
@@ -30,7 +32,73 @@ class TOTP(private val pin: String) {
         // TODO: implement file reading and decryption
     }
 
+    /**
+     * ========ENTRY MANIPULATION========
+     */
 
+    /**
+     * Returns an ArrayList of TOTP entries in safe form.
+     */
+    fun getSafeEntries(): ArrayList<SafeTOTPEntry> {
+        val safeEntries = ArrayList<SafeTOTPEntry>()
+        entries.forEach {
+            safeEntries.add(
+                SafeTOTPEntry(
+                    it.id,
+                    it.name,
+                    it.favorite
+                )
+            )
+        }
+        return safeEntries
+    }
+
+    /**
+     * Adds a new TOTP entry to the list and returns the new entry in safe form.
+     */
+    fun addEntry(name: String, key: String, crypto: String = "HmacSHA1"): SafeTOTPEntry {
+        entries.add(
+            TOTPEntry(
+                key,
+                System.currentTimeMillis().toString(),
+                name,
+                crypto
+            )
+        )
+        // TODO: on adding a new entry, write it to disk
+        return SafeTOTPEntry(
+            entries[entries.lastIndex].id,
+            name,
+            false
+        )
+    }
+
+    /**
+     * Removes the entry with the given id
+     */
+    fun removeEntry(id: String): Boolean {
+        for (i in 0 until entries.size)
+            if (entries[i].id == id) {
+                entries.removeAt(i)
+                // TODO: remove entry from disk
+                return true
+            }
+        return false
+    }
+
+    /**
+     * Updates the entry with the matching id with the safe version's name and favorite status.
+     * Returns false if the entry doesn't exist or does not need to be updated.
+     */
+    fun updateEntry(safeTOTPEntry: SafeTOTPEntry): Boolean {
+        val entry = entries.find { it.id == safeTOTPEntry.id } ?: return false
+        if (entry.name == safeTOTPEntry.name && entry.favorite == safeTOTPEntry.favorite)
+            return false
+        entry.name = safeTOTPEntry.name
+        entry.favorite = safeTOTPEntry.favorite
+        // TODO: update value on disk
+        return true
+    }
 
     /**
      * ========TOTP PROTOCOL CODE========
