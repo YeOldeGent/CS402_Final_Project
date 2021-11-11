@@ -11,6 +11,7 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
 import kotlin.experimental.and
+import kotlin.math.absoluteValue
 
 /**
  * This is an all in one class to contain the TOTP keys in one place. Handles everything from generating codes to storing and modifying keys on disk.
@@ -110,14 +111,6 @@ class TOTPWrapper(private val pin: String) {
      * Generates a TOTP code for the entry with the given id, or null if said entry does not exist.
      * @param id: id of entry to be used
      * @param now: current time in seconds I think? Use `System.currentTimeMillis().toString().substring(0, 10).toLong()`
-     *
-     * Note: to get time left on code, use the following:
-     * ```
-     * var sec = now % 60
-     * var secondsLeft = sec % 30
-     * ```
-     * When `sec % 30 == 0`, it is time to generate a new TOTP code. Could use a thread which
-     * checks the time every 0.5 seconds or so to see if the current code has expired?
      */
     fun getTOTPcode(id: String, now: Long): String? {
         val entry = entries.find { it.id == id } ?: return null
@@ -127,5 +120,14 @@ class TOTPWrapper(private val pin: String) {
         while (steps.length < 16)
             steps = "0$steps"
         return TOTP.generateTOTP(entry.key, steps, "6", entry.crypto)
+    }
+
+    /**
+     * Returns the amount of time (in seconds) left in the current code. When the value is 0,
+     * then it is time to generate a new code.
+     */
+    fun timeLeftInCode(): Int {
+        val sec = System.currentTimeMillis().toString().substring(0, 10).toLong() % 60
+        return if ((sec % 30).toInt() == 0) 0 else ((sec % 30).toInt() - 30).absoluteValue
     }
 }
