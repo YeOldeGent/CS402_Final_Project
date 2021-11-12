@@ -1,37 +1,47 @@
 package com.example.simpletotp.totp
 
 import android.os.Build
-import androidx.annotation.RequiresApi
-import java.lang.reflect.UndeclaredThrowableException
-import java.math.BigInteger
-import java.security.GeneralSecurityException
+import java.security.InvalidKeyException
 import java.security.InvalidParameterException
+import java.security.SecureRandom
 import java.util.*
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.IvParameterSpec
 import kotlin.collections.ArrayList
-import kotlin.experimental.and
 import kotlin.math.absoluteValue
 
 /**
  * This is an all in one class to contain the TOTP keys in one place. Handles everything from generating codes to storing and modifying keys on disk.
  * @param pin: pin used to encrypt/decrypt TOTP keys from the disk
- *
- * Credit for TOTP protocol:
- * https://tools.ietf.org/html/rfc6238#page-9
- * @author u011279
  */
-class TOTPWrapper(private val pin: String) {
+class TOTPWrapper(private var pin: String) {
     private val entries = ArrayList<TOTPEntry>()
+    private val secretKey: SecretKey
+    private val iv: IvParameterSpec
 
     /**
-     * On creation of a TOTP object, check for a file and decrypt it. Else, init a new file
+     * On creation of a TOTP object, initialize cryptographic tools. Then, check for an existing database. If one exists, decrypt it
+     * and store it in memory. If it does not, create a new database.
      */
     init {
         // check for errors
         if (pin.equals(null) || pin.length < 4)
             throw InvalidParameterException("Provided pin is either null or not long enough")
-        // TODO: implement file reading and decryption
+        // ========INITIALIZE CRYPTOGRAPHY========
+        // initialize secret key hash
+        val keygen = KeyGenerator.getInstance("AES")
+        val secureRandom = SecureRandom.getInstance("SHA1PrNG")
+        secureRandom.setSeed(pin.toByteArray())
+        keygen.init(256, secureRandom)
+        secretKey = keygen.generateKey()
+        // initialize initial vector
+        val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        iv = IvParameterSpec(cipher.iv)
+        // delete pin from memory to be safe
+        pin = ""
     }
 
     /**
@@ -129,5 +139,37 @@ class TOTPWrapper(private val pin: String) {
     fun timeLeftInCode(): Int {
         val sec = System.currentTimeMillis().toString().substring(0, 10).toLong() % 60
         return if ((sec % 30).toInt() == 0) 0 else ((sec % 30).toInt() - 30).absoluteValue
+    }
+
+    /**
+     * ========CRYPTOGRAPHY========
+     */
+
+    /**
+     * Encrypt the given plaintext with AES CBC
+     */
+    fun encrypt(plaintext: String): String {
+        val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, iv)
+        val ciphertext: ByteArray = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Base64.getEncoder().encodeToString(ciphertext)
+        } else {
+            throw Error("Incorrect SDK version")
+        }
+    }
+
+    /**
+     * Decrypt the given ciphertext with AES CBC
+     */
+    fun decrypt(ciphertext: String): String {
+        val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, iv)
+        val plaintext: ByteArray = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            cipher.doFinal(Base64.getDecoder().decode(ciphertext))
+        } else {
+            throw Error("Incorrect SDK version")
+        }
+        return plaintext.toString(Charsets.UTF_8)
     }
 }

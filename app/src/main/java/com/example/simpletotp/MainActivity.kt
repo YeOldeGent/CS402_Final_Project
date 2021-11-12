@@ -26,4 +26,11 @@ class MainActivity : AppCompatActivity() {
         val now = System.currentTimeMillis().toString().substring(0, 10).toLong()
         println("TOTP code: " + totp.getTOTPcode(safeTOTPEntries[0].id, now))
     }
+
+    private fun testEncryption() {
+        val wrapper = TOTPWrapper("1234")
+        val encrypted = wrapper.encrypt("Hello world!")
+        println(encrypted)
+        println(wrapper.decrypt(encrypted))
+    }
 }
