@@ -1,11 +1,9 @@
 package com.example.simpletotp.totp
 
-import android.content.ComponentName
 import android.content.ContentValues
 import android.content.Context
 import android.os.Build
 import com.example.simpletotp.database.TOTPEntryHelper
-import java.security.InvalidKeyException
 import java.security.InvalidParameterException
 import java.security.SecureRandom
 import java.util.*
@@ -15,7 +13,6 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.IvParameterSpec
 import kotlin.collections.ArrayList
 import kotlin.math.absoluteValue
-import kotlin.experimental.and
 
 /**
  * This is an all in one class to contain the TOTP keys in one place. Handles everything from generating codes to storing and modifying keys on disk.
