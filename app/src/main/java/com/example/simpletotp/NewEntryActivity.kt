@@ -1,4 +1,4 @@
-package com.example.qrscanner
+package com.example.simpletotp
 
 import android.content.Intent
 import android.graphics.Color
@@ -20,6 +20,8 @@ class NewEntryActivity : AppCompatActivity() {
         val error = findViewById<TextView>(R.id.errorText)
         val submit: Button = findViewById(R.id.submit)
 
+        key.setText(intent.getStringExtra("KEY"))
+
         val nameString = name.text
         val keyString = key.text
 
@@ -37,8 +39,10 @@ class NewEntryActivity : AppCompatActivity() {
         key.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
 
-            override fun onTextChanged(s: CharSequence, start: Int,
-                                       before: Int, count: Int) {
+            override fun onTextChanged(
+                s: CharSequence, start: Int,
+                before: Int, count: Int
+            ) {
                 key.setTextColor(Color.BLACK)
             }
 

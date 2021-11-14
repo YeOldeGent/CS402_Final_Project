@@ -1,5 +1,6 @@
-package com.example.qrscanner
+package com.example.simpletotp
 
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
@@ -43,6 +44,9 @@ class QRActivity : AppCompatActivity() {
         codescanner.decodeCallback = DecodeCallback {
             runOnUiThread {
                 Toast.makeText(this, "Scan Result: ${it.text}", Toast.LENGTH_SHORT).show()
+                val intent = Intent(this, NewEntryActivity::class.java)
+                intent.putExtra("KEY",it.text)
+                startActivity(intent)
             }
         }
 
