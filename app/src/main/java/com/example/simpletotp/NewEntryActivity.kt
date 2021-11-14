@@ -27,7 +27,9 @@ class NewEntryActivity : AppCompatActivity() {
 
         submit.setOnClickListener {
             error.text = ""
-            if (key.text.length == 40 || key.text.length == 64 || key.text.length == 128) {
+            if (name.text.length == 0) {
+                error.text = "Please enter a name!!"
+            } else if (key.text.length == 40 || key.text.length == 64 || key.text.length == 128) {
                 val intent = Intent(this, MainActivity::class.java)
                 startActivity(intent)
             } else {
@@ -39,11 +41,21 @@ class NewEntryActivity : AppCompatActivity() {
         key.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
 
-            override fun onTextChanged(
-                s: CharSequence, start: Int,
-                before: Int, count: Int
-            ) {
+            override fun onTextChanged(s: CharSequence, start: Int,
+                                       before: Int, count: Int) {
                 key.setTextColor(Color.BLACK)
+                error.text = ""
+            }
+
+            override fun afterTextChanged(p0: Editable?) {}
+        })
+
+        name.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
+
+            override fun onTextChanged(s: CharSequence, start: Int,
+                                       before: Int, count: Int) {
+                error.text = ""
             }
 
             override fun afterTextChanged(p0: Editable?) {}
