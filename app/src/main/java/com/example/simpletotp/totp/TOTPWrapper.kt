@@ -1,6 +1,10 @@
 package com.example.simpletotp.totp
 
+import android.content.ComponentName
+import android.content.ContentValues
+import android.content.Context
 import android.os.Build
+import com.example.simpletotp.database.TOTPEntryHelper
 import java.security.InvalidKeyException
 import java.security.InvalidParameterException
 import java.security.SecureRandom
@@ -68,7 +72,7 @@ class TOTPWrapper(private var pin: String) {
     /**
      * Adds a new TOTP entry to the list and returns the new entry in safe form.
      */
-    fun addEntry(name: String, key: String): SafeTOTPEntry {
+    fun addEntry(name: String, key: String, context: Context): SafeTOTPEntry {
         entries.add(
             TOTPEntry(
                 key,
@@ -82,12 +86,59 @@ class TOTPWrapper(private var pin: String) {
                 }
             )
         )
+        val newEntry = entries[entries.lastIndex]
         // TODO: on adding a new entry, write it to disk
+//        addToDB(newEntry, context)
+        // read from db
+        readFromDB(newEntry, context)
+
         return SafeTOTPEntry(
-            entries[entries.lastIndex].id,
+            newEntry.id,
             name,
             false
         )
+    }
+
+    private fun readFromDB(entry: TOTPEntry, context: Context) {
+        val dbHelper = TOTPEntryHelper(context)
+        val db = dbHelper.readableDatabase
+        val projection = arrayOf("*")
+        val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
+        val selectionArgs = arrayOf(entry.id)
+        val sortOrder = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE} DESC"
+        val cursor = db.query(
+            TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
+            projection,
+            null,
+            null,
+            null,
+            null,
+            sortOrder
+        )
+        println("Count: " + cursor.count)
+        with(cursor) {
+            while (moveToNext())
+                println("id: " + getInt(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE)))
+        }
+    }
+
+    private fun addToDB(entry: TOTPEntry, context: Context) {
+        val dbHelper = TOTPEntryHelper(context)
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID, entry.id)
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE, entry.key)
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, entry.name)
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE, entry.crypto)
+            put(
+                TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE,
+                entry.favorite
+            )
+        }
+        val newRowId =
+            db?.insert(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME, null, values)
+        println("New row id: $newRowId")
+        db.close()
     }
 
     /**

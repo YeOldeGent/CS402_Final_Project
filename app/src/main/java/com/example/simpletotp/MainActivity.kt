@@ -1,5 +1,6 @@
 package com.example.simpletotp
 
+import android.content.Context
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -11,16 +12,18 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
     }
 
-    private fun testTOTP() {
+    private fun testTOTP(context: Context) {
         val totp = TOTPWrapper("1234")
         val safeTOTPEntries = totp.getSafeEntries()
         safeTOTPEntries.add(
             totp.addEntry(
                 "Name",
                 "3132333435363738393031323334353637383930" + "3132333435363738393031323334353637383930"
-                        + "3132333435363738393031323334353637383930" + "31323334"
+                        + "3132333435363738393031323334353637383930" + "31323334",
+                context
             )
         )
         val now = System.currentTimeMillis().toString().substring(0, 10).toLong()
