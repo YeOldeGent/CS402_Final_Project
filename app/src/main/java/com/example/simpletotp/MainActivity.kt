@@ -1,6 +1,10 @@
 package com.example.simpletotp
 
+
 import android.content.DialogInterface
+
+import android.content.Context
+
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -21,6 +25,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
     }
+
 
     fun testTOTP(view: View) {
 
@@ -54,5 +59,13 @@ class MainActivity : AppCompatActivity() {
 //        )
 //        val now = System.currentTimeMillis().toString().substring(0, 10).toLong()
 //        println("TOTP code: " + totp.getTOTPcode(safeTOTPEntries[0].id, now))
+
+    }
+
+    private fun testEncryption() {
+        val wrapper = TOTPWrapper("1234")
+        val encrypted = wrapper.encrypt("Hello world!")
+        println(encrypted)
+        println(wrapper.decrypt(encrypted))
     }
 }
