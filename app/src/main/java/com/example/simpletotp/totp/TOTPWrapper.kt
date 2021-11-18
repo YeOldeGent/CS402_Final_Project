@@ -28,7 +28,8 @@ class TOTPWrapper(private val pin: String) {
      * On creation of a TOTP object, check for a file and decrypt it. Else, init a new file
      */
     init {
-        // check for errors
+        // check for errors, we are also handling pin checking here
+        //if(pin.equals(null) || pin.length < 4 || !pin.equals(storedPin))
         if (pin.equals(null) || pin.length < 4)
             throw InvalidParameterException("Provided pin is either null or not long enough")
         // TODO: implement file reading and decryption
