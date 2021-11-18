@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.os.Build
 import com.example.simpletotp.database.TOTPEntryHelper
+import java.security.InvalidKeyException
 import java.security.InvalidParameterException
 import java.security.SecureRandom
 import java.util.*
@@ -44,6 +45,9 @@ class TOTPWrapper(private var pin: String) {
         iv = IvParameterSpec(cipher.iv)
         // delete pin from memory to be safe
         pin = ""
+        // if pin is incorrect, throw an error
+        if (false)
+            throw InvalidKeyException("Incorrect pin")
     }
 
     /**
