@@ -29,7 +29,8 @@ class TOTPWrapper(private var pin: String) {
      * and store it in memory. If it does not, create a new database.
      */
     init {
-        // check for errors
+        // check for errors, we are also handling pin checking here
+        //if(pin.equals(null) || pin.length < 4 || !pin.equals(storedPin))
         if (pin.equals(null) || pin.length < 4)
             throw InvalidParameterException("Provided pin is either null or not long enough")
         // ========INITIALIZE CRYPTOGRAPHY========
