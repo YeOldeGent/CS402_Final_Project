@@ -1,9 +1,15 @@
 package com.example.simpletotp
 
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.os.Bundle
+import android.provider.AlarmClock.EXTRA_MESSAGE
+import android.view.View
+import android.widget.Button
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -42,6 +48,24 @@ class QRActivity : AppCompatActivity() {
         codescanner.scanMode = ScanMode.SINGLE
         codescanner.isAutoFocusEnabled = true
         codescanner.isFlashEnabled = false
+
+        //adds the skip button to the bottom right
+        val skip = findViewById<View>(R.id.skipButton)
+        skip.setOnClickListener {
+            //when clicked, a message will pop up, making them confirm their choice
+            val skipDialog: android.app.AlertDialog.Builder = android.app.AlertDialog.Builder(this)
+            skipDialog.setTitle("Skip?")
+            skipDialog.setMessage("Do you want to skip the scanner and manually input a key?")
+            //if the press 'Yes', they will be brought to the add entry screen with two blank boxes
+            skipDialog.setPositiveButton("Yes", DialogInterface.OnClickListener { dialog, which ->
+                val intent = Intent(this, NewEntryActivity::class.java)
+                intent.putExtra("KEY","")
+                startActivity(intent)
+            })
+            //if the press 'Cancel', they can continue scanning as normal
+            skipDialog.setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
+            skipDialog.show()
+        }
 
         //if it successfully scans a code, start the NewEntryActivity and send it the key
         codescanner.decodeCallback = DecodeCallback {
