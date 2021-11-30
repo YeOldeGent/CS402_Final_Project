@@ -74,27 +74,12 @@ class TOTPWrapper(private var pin: String, context: Context) {
      * ========ENTRY MANIPULATION========
      */
 
-    /**
-     * Returns an ArrayList of TOTP entries in safe form.
-     */
-    fun getSafeEntries(): ArrayList<SafeTOTPEntry> {
-        val safeEntries = ArrayList<SafeTOTPEntry>()
-        entries.forEach {
-            safeEntries.add(
-                SafeTOTPEntry(
-                    it.id,
-                    it.name,
-                    it.favorite
-                )
-            )
-        }
-        return safeEntries
-    }
+    // }----Create----{
 
     /**
      * Creates a new TOTP entry to the list and returns the new entry in safe form.
      */
-    fun createEntry(name: String, key: String, context: Context): SafeTOTPEntry {
+    fun createEntry(name: String, key: String, context: Context): SafeTOTPEntry? {
         entries.add(
             TOTPEntry(
                 key,
@@ -110,7 +95,8 @@ class TOTPWrapper(private var pin: String, context: Context) {
         )
         val newEntry = entries[entries.lastIndex]
         // add new entry to db
-        dbCreate(newEntry, context)
+        if (dbCreate(newEntry, context) == -1)
+            return null
 
         return SafeTOTPEntry(
             newEntry.id,
@@ -122,7 +108,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
     /**
      * Creates a new entry in the database
      */
-    private fun dbCreate(entry: TOTPEntry, context: Context) {
+    private fun dbCreate(entry: TOTPEntry, context: Context): Int {
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
@@ -135,33 +121,29 @@ class TOTPWrapper(private var pin: String, context: Context) {
                 entry.favorite
             )
         }
-        db?.insert(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME, null, values)
+        val id = db.insert(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME, null, values)
         db.close()
+        return if (id == -1L) -1 else 0
     }
 
+    // }----Read----{
+
     /**
-     * TODO: I don't think I ever need to read a single entry from the db...
+     * Returns an ArrayList of TOTP entries in safe form.
      */
-    private fun dbRead(entry: TOTPEntry, context: Context) {
-        val dbHelper = TOTPEntryHelper(context)
-        val db = dbHelper.readableDatabase
-        val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
-        val selectionArgs = arrayOf(entry.id)
-        val sortOrder = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE} DESC"
-        val cursor = db.query(
-            TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
-            null,
-            selection,
-            selectionArgs,
-            null,
-            null,
-            sortOrder
-        )
-        println("Count: " + cursor.count)
-        with(cursor) {
-            while (moveToNext())
-                println("id: " + getInt(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE)))
+    fun readEntries(context: Context): ArrayList<SafeTOTPEntry> {
+        dbReadAll(context)
+        val safeEntries = ArrayList<SafeTOTPEntry>()
+        entries.forEach {
+            safeEntries.add(
+                SafeTOTPEntry(
+                    it.id,
+                    it.name,
+                    it.favorite
+                )
+            )
         }
+        return safeEntries
     }
 
     /**
@@ -191,6 +173,8 @@ class TOTPWrapper(private var pin: String, context: Context) {
         db.close()
     }
 
+    // }----Update----{
+
     /**
      * Updates the entry with the matching id with the safe version's name and favorite status.
      * Returns false if the entry doesn't exist or does not need to be updated.
@@ -201,11 +185,9 @@ class TOTPWrapper(private var pin: String, context: Context) {
             return false
         entry.name = safeTOTPEntry.name
         entry.favorite = safeTOTPEntry.favorite
-        println(entry)
         // update value on disk
         if (dbUpdate(entry, context) < 1)
-            throw NoSuchElementException("No fields updated in database")
-        println("Yay!")
+            return false
         return true
     }
 
@@ -224,29 +206,51 @@ class TOTPWrapper(private var pin: String, context: Context) {
         }
         val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
         val selectionArgs = arrayOf(entry.id)
-        return db.update(
+        val count = db.update(
             TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
             values,
             selection,
             selectionArgs
         )
+        db.close()
+        return count
     }
+
+    // }----Delete----{
 
     /**
      * Removes the entry with the given id
      */
-    fun deleteEntry(id: String): Boolean {
+    fun deleteEntry(entry: SafeTOTPEntry, context: Context): Boolean {
         for (i in 0 until entries.size)
-            if (entries[i].id == id) {
-                entries.removeAt(i)
-                // TODO: remove entry from disk
+            if (entries[i].id == entry.id) {
+                if (dbDelete(entries.removeAt(i), context) < 1)
+                    return false
                 return true
             }
         return false
     }
 
-    private fun dbDelete(entry: TOTPEntry, context: Context) {
+    /**
+     * Deletes the given entry from the db
+     */
+    private fun dbDelete(entry: TOTPEntry, context: Context): Int {
+        val dbHelper = TOTPEntryHelper(context)
+        val db = dbHelper.writableDatabase
+        val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
+        val selectionArgs = arrayOf(entry.id)
+        val count = db.delete(
+            TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
+            selection,
+            selectionArgs
+        )
+        db.close()
+        return count
     }
+
+    /**
+     * ========TOTP ALGORITHM========
+     */
 
     /**
      * Generates a TOTP code for the entry with the given id, or null if said entry does not exist.
