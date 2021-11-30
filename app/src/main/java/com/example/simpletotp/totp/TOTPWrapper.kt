@@ -59,6 +59,9 @@ class TOTPWrapper(private var pin: String, context: Context) {
         dbReadAll(context)
     }
 
+    /**
+     * Static functions
+     */
     companion object {
         /**
          * Checks if the database exists already. Can be used to check for first-time setup.
