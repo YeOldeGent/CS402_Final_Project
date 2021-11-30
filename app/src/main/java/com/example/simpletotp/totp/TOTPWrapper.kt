@@ -2,8 +2,10 @@ package com.example.simpletotp.totp
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.DatabaseErrorHandler
 import android.os.Build
 import com.example.simpletotp.database.TOTPEntryHelper
+import java.io.FileNotFoundException
 import java.security.InvalidKeyException
 import java.security.InvalidParameterException
 import java.security.SecureRandom
@@ -160,13 +162,18 @@ class TOTPWrapper(private var pin: String, context: Context) {
         }
     }
 
+    /**
+     * Reads all entries from the db and adds them to the entry list.
+     */
     private fun dbReadAll(context: Context) {
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.readableDatabase
         val cursor = db.rawQuery(
             "SELECT * FROM " + TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
             null
-        )
+        ) ?: throw FileNotFoundException("Database does not exist or was not found")
+        // if successful, clear entries list
+        entries.clear()
         with(cursor) {
             while (moveToNext())
                 entries.add(
