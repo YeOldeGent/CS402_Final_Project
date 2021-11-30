@@ -2,8 +2,10 @@ package com.example.simpletotp.totp
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.DatabaseErrorHandler
 import android.os.Build
 import com.example.simpletotp.database.TOTPEntryHelper
+import java.io.FileNotFoundException
 import java.security.InvalidKeyException
 import java.security.InvalidParameterException
 import java.security.SecureRandom
@@ -12,6 +14,7 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.IvParameterSpec
+import kotlin.NoSuchElementException
 import kotlin.collections.ArrayList
 import kotlin.math.absoluteValue
 
@@ -19,7 +22,7 @@ import kotlin.math.absoluteValue
  * This is an all in one class to contain the TOTP keys in one place. Handles everything from generating codes to storing and modifying keys on disk.
  * @param pin: pin used to encrypt/decrypt TOTP keys from the disk
  */
-class TOTPWrapper(private var pin: String) {
+class TOTPWrapper(private var pin: String, context: Context) {
     private val entries = ArrayList<TOTPEntry>()
     private val secretKey: SecretKey
     private val iv: IvParameterSpec
@@ -29,10 +32,10 @@ class TOTPWrapper(private var pin: String) {
      * and store it in memory. If it does not, create a new database.
      */
     init {
-        // check for errors, we are also handling pin checking here
-        //if(pin.equals(null) || pin.length < 4 || !pin.equals(storedPin))
+        // check for a valid pin
         if (pin.equals(null) || pin.length < 4)
             throw InvalidParameterException("Provided pin is either null or not long enough")
+
         // ========INITIALIZE CRYPTOGRAPHY========
         // initialize secret key hash
         val keygen = KeyGenerator.getInstance("AES")
@@ -44,38 +47,42 @@ class TOTPWrapper(private var pin: String) {
         val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
         cipher.init(Cipher.ENCRYPT_MODE, secretKey)
         iv = IvParameterSpec(cipher.iv)
-        // delete pin from memory to be safe
+        // delete plaintext pin from memory to be safe
         pin = ""
+
+        // ========DB INITIALIZATION========
+
+        // ========PIN VALIDATION========
         // if pin is incorrect, throw an error
         if (false)
             throw InvalidKeyException("Incorrect pin")
+        dbReadAll(context)
+    }
+
+    /**
+     * Static functions
+     */
+    companion object {
+        /**
+         * Checks if the database exists already. Can be used to check for first-time setup.
+         */
+        @JvmStatic
+        fun dbExists(context: Context): Boolean {
+            val dbFile = context.getDatabasePath(TOTPEntryHelper.DATABASE_NAME)
+            return dbFile.exists()
+        }
     }
 
     /**
      * ========ENTRY MANIPULATION========
      */
 
-    /**
-     * Returns an ArrayList of TOTP entries in safe form.
-     */
-    fun getSafeEntries(): ArrayList<SafeTOTPEntry> {
-        val safeEntries = ArrayList<SafeTOTPEntry>()
-        entries.forEach {
-            safeEntries.add(
-                SafeTOTPEntry(
-                    it.id,
-                    it.name,
-                    it.favorite
-                )
-            )
-        }
-        return safeEntries
-    }
+    // }----Create----{
 
     /**
-     * Adds a new TOTP entry to the list and returns the new entry in safe form.
+     * Creates a new TOTP entry to the list and returns the new entry in safe form.
      */
-    fun addEntry(name: String, key: String, context: Context): SafeTOTPEntry {
+    fun createEntry(name: String, key: String, context: Context): SafeTOTPEntry? {
         entries.add(
             TOTPEntry(
                 key,
@@ -90,10 +97,9 @@ class TOTPWrapper(private var pin: String) {
             )
         )
         val newEntry = entries[entries.lastIndex]
-        // TODO: on adding a new entry, write it to disk
-//        addToDB(newEntry, context)
-        // read from db
-        readFromDB(newEntry, context)
+        // add new entry to db
+        if (dbCreate(newEntry, context) == -1)
+            return null
 
         return SafeTOTPEntry(
             newEntry.id,
@@ -102,30 +108,10 @@ class TOTPWrapper(private var pin: String) {
         )
     }
 
-    private fun readFromDB(entry: TOTPEntry, context: Context) {
-        val dbHelper = TOTPEntryHelper(context)
-        val db = dbHelper.readableDatabase
-        val projection = arrayOf("*")
-        val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
-        val selectionArgs = arrayOf(entry.id)
-        val sortOrder = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE} DESC"
-        val cursor = db.query(
-            TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
-            projection,
-            null,
-            null,
-            null,
-            null,
-            sortOrder
-        )
-        println("Count: " + cursor.count)
-        with(cursor) {
-            while (moveToNext())
-                println("id: " + getInt(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE)))
-        }
-    }
-
-    private fun addToDB(entry: TOTPEntry, context: Context) {
+    /**
+     * Creates a new entry in the database
+     */
+    private fun dbCreate(entry: TOTPEntry, context: Context): Int {
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
@@ -138,38 +124,136 @@ class TOTPWrapper(private var pin: String) {
                 entry.favorite
             )
         }
-        val newRowId =
-            db?.insert(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME, null, values)
-        println("New row id: $newRowId")
+        val id = db.insert(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME, null, values)
+        db.close()
+        return if (id == -1L) -1 else 0
+    }
+
+    // }----Read----{
+
+    /**
+     * Returns an ArrayList of TOTP entries in safe form.
+     */
+    fun readEntries(context: Context): ArrayList<SafeTOTPEntry> {
+        dbReadAll(context)
+        val safeEntries = ArrayList<SafeTOTPEntry>()
+        entries.forEach {
+            safeEntries.add(
+                SafeTOTPEntry(
+                    it.id,
+                    it.name,
+                    it.favorite
+                )
+            )
+        }
+        return safeEntries
+    }
+
+    /**
+     * Reads all entries from the db and adds them to the entry list.
+     */
+    private fun dbReadAll(context: Context) {
+        val dbHelper = TOTPEntryHelper(context)
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT * FROM " + TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
+            null
+        ) ?: throw FileNotFoundException("Database does not exist or was not found")
+        // if successful, clear entries list
+        entries.clear()
+        with(cursor) {
+            while (moveToNext())
+                entries.add(
+                    TOTPEntry(
+                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE)),
+                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID)),
+                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE)),
+                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE)),
+                        getInt(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE)) == 1
+                    )
+                )
+        }
         db.close()
     }
+
+    // }----Update----{
+
+    /**
+     * Updates the entry with the matching id with the safe version's name and favorite status.
+     * Returns false if the entry doesn't exist or does not need to be updated.
+     */
+    fun updateEntry(safeTOTPEntry: SafeTOTPEntry, context: Context): Boolean {
+        val entry = entries.find { it.id == safeTOTPEntry.id } ?: return false
+        if (entry.name == safeTOTPEntry.name && entry.favorite == safeTOTPEntry.favorite)
+            return false
+        entry.name = safeTOTPEntry.name
+        entry.favorite = safeTOTPEntry.favorite
+        // update value on disk
+        if (dbUpdate(entry, context) < 1)
+            return false
+        return true
+    }
+
+    /**
+     * Updates the database entry reflection of the given TOTPEntry
+     */
+    private fun dbUpdate(entry: TOTPEntry, context: Context): Int {
+        val dbHelper = TOTPEntryHelper(context)
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, entry.name)
+            put(
+                TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE,
+                entry.favorite
+            )
+        }
+        val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
+        val selectionArgs = arrayOf(entry.id)
+        val count = db.update(
+            TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
+            values,
+            selection,
+            selectionArgs
+        )
+        db.close()
+        return count
+    }
+
+    // }----Delete----{
 
     /**
      * Removes the entry with the given id
      */
-    fun removeEntry(id: String): Boolean {
+    fun deleteEntry(entry: SafeTOTPEntry, context: Context): Boolean {
         for (i in 0 until entries.size)
-            if (entries[i].id == id) {
-                entries.removeAt(i)
-                // TODO: remove entry from disk
+            if (entries[i].id == entry.id) {
+                if (dbDelete(entries.removeAt(i), context) < 1)
+                    return false
                 return true
             }
         return false
     }
 
     /**
-     * Updates the entry with the matching id with the safe version's name and favorite status.
-     * Returns false if the entry doesn't exist or does not need to be updated.
+     * Deletes the given entry from the db
      */
-    fun updateEntry(safeTOTPEntry: SafeTOTPEntry): Boolean {
-        val entry = entries.find { it.id == safeTOTPEntry.id } ?: return false
-        if (entry.name == safeTOTPEntry.name && entry.favorite == safeTOTPEntry.favorite)
-            return false
-        entry.name = safeTOTPEntry.name
-        entry.favorite = safeTOTPEntry.favorite
-        // TODO: update value on disk
-        return true
+    private fun dbDelete(entry: TOTPEntry, context: Context): Int {
+        val dbHelper = TOTPEntryHelper(context)
+        val db = dbHelper.writableDatabase
+        val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
+        val selectionArgs = arrayOf(entry.id)
+        val count = db.delete(
+            TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
+            selection,
+            selectionArgs
+        )
+        db.close()
+        return count
     }
+
+    /**
+     * ========TOTP ALGORITHM========
+     */
 
     /**
      * Generates a TOTP code for the entry with the given id, or null if said entry does not exist.
