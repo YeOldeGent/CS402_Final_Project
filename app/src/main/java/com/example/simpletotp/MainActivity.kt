@@ -1,6 +1,5 @@
 package com.example.simpletotp
 
-import android.content.Context
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import com.example.simpletotp.totp.TOTPWrapper
@@ -11,7 +10,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
     }
 
-    private fun testTOTP(context: Context) {
+    private fun testTOTP() {
         val totp = TOTPWrapper("1234", this)
         val safeTOTPEntries = totp.getSafeEntries()
         safeTOTPEntries.add(
@@ -19,7 +18,7 @@ class MainActivity : AppCompatActivity() {
                 "Name",
                 "3132333435363738393031323334353637383930" + "3132333435363738393031323334353637383930"
                         + "3132333435363738393031323334353637383930" + "31323334",
-                context
+                this
             )
         )
         val now = System.currentTimeMillis().toString().substring(0, 10).toLong()
@@ -34,7 +33,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun testDB() {
-        println(TOTPWrapper.dbExists(this))
         val totp = TOTPWrapper("1234", this)
+//        val safeEntries = totp.getSafeEntries()
+//        safeEntries[0].name = "New Name"
+//        totp.updateEntry(safeEntries[0], this)
     }
 }

@@ -14,6 +14,7 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.IvParameterSpec
+import kotlin.NoSuchElementException
 import kotlin.collections.ArrayList
 import kotlin.math.absoluteValue
 
@@ -108,10 +109,8 @@ class TOTPWrapper(private var pin: String, context: Context) {
             )
         )
         val newEntry = entries[entries.lastIndex]
-        // TODO: on adding a new entry, write it to disk
-//        dbCreate(newEntry, context)
-        // read from db
-        dbRead(newEntry, context)
+        // add new entry to db
+        dbCreate(newEntry, context)
 
         return SafeTOTPEntry(
             newEntry.id,
@@ -120,6 +119,9 @@ class TOTPWrapper(private var pin: String, context: Context) {
         )
     }
 
+    /**
+     * Creates a new entry in the database
+     */
     private fun dbCreate(entry: TOTPEntry, context: Context) {
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.writableDatabase
@@ -133,24 +135,24 @@ class TOTPWrapper(private var pin: String, context: Context) {
                 entry.favorite
             )
         }
-        val newRowId =
-            db?.insert(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME, null, values)
-        println("New row id: $newRowId")
+        db?.insert(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME, null, values)
         db.close()
     }
 
+    /**
+     * TODO: I don't think I ever need to read a single entry from the db...
+     */
     private fun dbRead(entry: TOTPEntry, context: Context) {
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.readableDatabase
-        val projection = arrayOf("*")
         val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
         val selectionArgs = arrayOf(entry.id)
         val sortOrder = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE} DESC"
         val cursor = db.query(
             TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
-            projection,
             null,
-            null,
+            selection,
+            selectionArgs,
             null,
             null,
             sortOrder
@@ -193,17 +195,41 @@ class TOTPWrapper(private var pin: String, context: Context) {
      * Updates the entry with the matching id with the safe version's name and favorite status.
      * Returns false if the entry doesn't exist or does not need to be updated.
      */
-    fun updateEntry(safeTOTPEntry: SafeTOTPEntry): Boolean {
+    fun updateEntry(safeTOTPEntry: SafeTOTPEntry, context: Context): Boolean {
         val entry = entries.find { it.id == safeTOTPEntry.id } ?: return false
         if (entry.name == safeTOTPEntry.name && entry.favorite == safeTOTPEntry.favorite)
             return false
         entry.name = safeTOTPEntry.name
         entry.favorite = safeTOTPEntry.favorite
-        // TODO: update value on disk
+        println(entry)
+        // update value on disk
+        if (dbUpdate(entry, context) < 1)
+            throw NoSuchElementException("No fields updated in database")
+        println("Yay!")
         return true
     }
 
-    private fun dbUpdate(entry: TOTPEntry, context: Context) {
+    /**
+     * Updates the database entry reflection of the given TOTPEntry
+     */
+    private fun dbUpdate(entry: TOTPEntry, context: Context): Int {
+        val dbHelper = TOTPEntryHelper(context)
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, entry.name)
+            put(
+                TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE,
+                entry.favorite
+            )
+        }
+        val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
+        val selectionArgs = arrayOf(entry.id)
+        return db.update(
+            TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
+            values,
+            selection,
+            selectionArgs
+        )
     }
 
     /**
