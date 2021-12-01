@@ -19,7 +19,7 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/editTextCode"
+        android:id="@+id/textViewCode"
         android:layout_width="360dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
@@ -38,12 +38,10 @@
         android:layout_width="165dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:clickable="false"
         android:text="Save Changes"
-        android:backgroundTint="#555555"
         app:layout_constraintEnd_toStartOf="@+id/copyButton"
         app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="@+id/editTextCode"
+        app:layout_constraintStart_toStartOf="@+id/textViewCode"
         app:layout_constraintTop_toBottomOf="@+id/timer" />
 
     <Button
@@ -52,7 +50,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
         android:text="Copy Code"
-        app:layout_constraintEnd_toEndOf="@+id/editTextCode"
+        app:layout_constraintEnd_toEndOf="@+id/textViewCode"
         app:layout_constraintTop_toBottomOf="@+id/timer" />
 
     <TextView
@@ -61,10 +59,10 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
         android:text="Time left: 60"
-        app:layout_constraintEnd_toEndOf="@+id/editTextCode"
+        app:layout_constraintEnd_toEndOf="@+id/textViewCode"
         app:layout_constraintHorizontal_bias="0.496"
-        app:layout_constraintStart_toStartOf="@+id/editTextCode"
-        app:layout_constraintTop_toBottomOf="@+id/editTextCode" />
+        app:layout_constraintStart_toStartOf="@+id/textViewCode"
+        app:layout_constraintTop_toBottomOf="@+id/textViewCode" />
 
     <Button
         android:id="@+id/doneButton"
@@ -76,5 +74,17 @@
         app:layout_constraintHorizontal_bias="0.496"
         app:layout_constraintStart_toStartOf="@+id/saveButton"
         app:layout_constraintTop_toBottomOf="@+id/timer" />
+
+    <Button
+        android:id="@+id/deleteButton"
+        android:layout_width="100dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="48dp"
+        android:backgroundTint="#aa3333"
+        android:text="Delete Entry"
+        app:layout_constraintEnd_toEndOf="@+id/copyButton"
+        app:layout_constraintHorizontal_bias="0.496"
+        app:layout_constraintStart_toStartOf="@+id/saveButton"
+        app:layout_constraintTop_toBottomOf="@+id/doneButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
