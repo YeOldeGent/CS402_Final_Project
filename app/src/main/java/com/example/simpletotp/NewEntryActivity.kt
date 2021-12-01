@@ -9,8 +9,9 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.example.simpletotp.totp.TOTPWrapper
 
-class NewEntryActivity : AppCompatActivity() {
+class NewEntryActivity(val wrapper: TOTPWrapper) : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_newentry)
@@ -25,8 +26,8 @@ class NewEntryActivity : AppCompatActivity() {
         key.setText(intent.getStringExtra("KEY"))
 
         //save off the inputted information
-        val nameString = name.text
-        val keyString = key.text
+        var nameString = name.text
+        var keyString = key.text
 
         //when you push the button, make sure everything is the right format, if not, make the error text visible
         submit.setOnClickListener {
@@ -34,6 +35,7 @@ class NewEntryActivity : AppCompatActivity() {
             if (name.text.length == 0) {
                 error.text = "Please enter a name!!"
             } else if (key.text.length == 40 || key.text.length == 64 || key.text.length == 128) {
+                wrapper.createEntry(nameString.toString(), keyString.toString(), this)
                 val intent = Intent(this, MainActivity::class.java)
                 startActivity(intent)
             } else {
@@ -50,6 +52,7 @@ class NewEntryActivity : AppCompatActivity() {
                                        before: Int, count: Int) {
                 key.setTextColor(Color.BLACK)
                 error.text = ""
+                keyString = key.text
             }
 
             override fun afterTextChanged(p0: Editable?) {}
@@ -62,6 +65,7 @@ class NewEntryActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence, start: Int,
                                        before: Int, count: Int) {
                 error.text = ""
+                nameString = name.text
             }
 
             override fun afterTextChanged(p0: Editable?) {}
