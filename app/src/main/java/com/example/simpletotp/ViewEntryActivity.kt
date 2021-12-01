@@ -74,18 +74,18 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
         //remove the current entry
         deleteButton.setOnClickListener {
             //when clicked, a message will pop up, making them confirm their choice
-            val skipDialog: android.app.AlertDialog.Builder = android.app.AlertDialog.Builder(this)
-            skipDialog.setTitle("Delete?")
-            skipDialog.setMessage("Do you want delete this entry?")
+            val delDialog: android.app.AlertDialog.Builder = android.app.AlertDialog.Builder(this)
+            delDialog.setTitle("Delete?")
+            delDialog.setMessage("Do you want delete this entry?")
             //if the press 'Yes', the entry will be removed and they will be brought back to the list
-            skipDialog.setPositiveButton("Yes", DialogInterface.OnClickListener { dialog, which ->
-                wrapper.removeEntry(id)
+            delDialog.setPositiveButton("Yes", DialogInterface.OnClickListener { dialog, which ->
+                wrapper.deleteEntry(entry, this)
                 val intent = Intent(this, MainActivity::class.java)
                 startActivity(intent)
             })
             //if the press 'Cancel', they can continue editing/viewing the entry
-            skipDialog.setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
-            skipDialog.show()
+            delDialog.setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
+            delDialog.show()
         }
 
         //when you edit the name, make the save button clickable
@@ -104,12 +104,12 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
 
     //create a timer
     fun newTimer(timer: TextView, code: TextView, id: String) {
-        val timeLeft = wrapper.timeLeftInCode()
+        val timeLeft = wrapper.timeLeftInCode() * 1000
         var timerText = "Time left: "
         object : CountDownTimer(timeLeft.toLong(), 1000) {
             //on every tick, update the timer text
             override fun onTick(millisUntilFinished: Long) {
-                timerText = "Time left: " + SimpleDateFormat("mm:ss:SS").format(Date(millisUntilFinished))
+                timerText = "Time left: " + SimpleDateFormat("mm:ss").format(Date(millisUntilFinished))
                 timer.setText(timerText)
             }
 

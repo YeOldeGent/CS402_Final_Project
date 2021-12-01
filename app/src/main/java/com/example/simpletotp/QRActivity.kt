@@ -19,9 +19,10 @@ import com.budiyev.android.codescanner.CodeScannerView
 import com.budiyev.android.codescanner.DecodeCallback
 import com.budiyev.android.codescanner.ErrorCallback
 import com.budiyev.android.codescanner.ScanMode
+import com.example.simpletotp.totp.TOTPWrapper
 import java.util.jar.Manifest
 
-class QRActivity : AppCompatActivity() {
+class QRActivity(val wrapper: TOTPWrapper) : AppCompatActivity() {
 
     private lateinit var codescanner: CodeScanner
 
@@ -71,7 +72,7 @@ class QRActivity : AppCompatActivity() {
         codescanner.decodeCallback = DecodeCallback {
             runOnUiThread {
                 Toast.makeText(this, "Scan Result: ${it.text}", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, NewEntryActivity::class.java)
+                val intent = Intent(this, NewEntryActivity(wrapper)::class.java)
                 intent.putExtra("KEY",it.text)
                 startActivity(intent)
             }
