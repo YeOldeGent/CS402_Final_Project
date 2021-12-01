@@ -14,6 +14,9 @@ import android.R.attr.label
 import android.content.*
 
 import com.example.simpletotp.totp.SafeTOTPEntry
+import android.os.CountDownTimer
+import java.text.SimpleDateFormat
+import java.util.*
 
 
 class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : AppCompatActivity() {
@@ -40,9 +43,7 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
 
         code.setText(wrapper.getTOTPcode(id, System.currentTimeMillis().toString().substring(0, 10).toLong()))
 
-        val timeLeft = wrapper.timeLeftInCode()
-        val timerText = "Time left: " + timeLeft
-        timer.setText(timerText)
+        newTimer(timer, code, id)
 
         saveButton.setOnClickListener {
             entry.name = nameEdit.text.toString()
@@ -88,6 +89,22 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
 
             override fun afterTextChanged(p0: Editable?) {}
         })
+    }
+
+    fun newTimer(timer: TextView, code: TextView, id: String) {
+        val timeLeft = wrapper.timeLeftInCode()
+        var timerText = "Time left: "
+        object : CountDownTimer(timeLeft.toLong(), 1000) {
+            override fun onTick(millisUntilFinished: Long) {
+                timerText = "Time left: " + SimpleDateFormat("mm:ss:SS").format(Date(millisUntilFinished))
+                timer.setText(timerText)
+            }
+
+            override fun onFinish() {
+                code.setText(wrapper.getTOTPcode(id, System.currentTimeMillis().toString().substring(0, 10).toLong()))
+                newTimer(timer, code, id)
+            }
+        }.start()
     }
 
 }
