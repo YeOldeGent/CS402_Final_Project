@@ -37,6 +37,11 @@ class TOTPWrapper(private var pin: String, context: Context) {
             throw InvalidParameterException("Provided pin is either null or not long enough")
 
         // ========INITIALIZE CRYPTOGRAPHY========
+
+        // NOTE: secretKey is currently changing every time due to secureRandom being... random...
+        // TODO: implement salt and properly hash pin to use as secret key
+        // RESOURCES: https://www.novixys.com/blog/aes-encryption-decryption-password-java/
+
         // initialize secret key hash
         val keygen = KeyGenerator.getInstance("AES")
         val secureRandom = SecureRandom.getInstance("SHA1PrNG")
@@ -50,17 +55,81 @@ class TOTPWrapper(private var pin: String, context: Context) {
         // delete plaintext pin from memory to be safe
         pin = ""
 
-        // ========DB INITIALIZATION========
+        println("secret key: ${secretKey.encoded.decodeToString()}")
+        for (i in 1 until 5) {
+            for (element in iv.iv)
+                print(element)
+            println()
+            val encrypted = encrypt(iv.iv.decodeToString())
+            println("IV: ${iv.iv.decodeToString()}")
+            println("Encrypted iv: $encrypted")
+            println("Encrypted and unencrypted iv: ${decrypt(encrypted)}")
+        }
 
         // ========PIN VALIDATION========
-        // if pin is incorrect, throw an error
-        if (false)
-            throw InvalidKeyException("Incorrect pin")
+        if (!dbExists(context)) {
+            println("DB DOES NOT EXIST")
+            if (!saveCiphertext(context))
+                throw FileNotFoundException("Issues connecting with database")
+        } else {
+            println("DB EXISTS")
+            if (!correctPin(context))
+                throw InvalidKeyException("Incorrect pin")
+        }
+        // ========READ ALL DB ENTRIES========
         dbReadAll(context)
     }
 
     /**
-     * Static functions
+     * ========STARTUP DB HELPERS========
+     */
+
+    private fun saveCiphertext(context: Context): Boolean {
+        println("SAVING CIPHERTEXT")
+        val dbHelper = TOTPEntryHelper(context)
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put("hash", encrypt(iv.iv.decodeToString()))
+        }
+        val id = db.insert("Hash", null, values)
+        db.close()
+        return (id != -1L)
+    }
+
+    private fun correctPin(context: Context): Boolean {
+        println("TESTING PIN")
+        val dbHelper = TOTPEntryHelper(context)
+        val db = dbHelper.readableDatabase
+//        val cursor = db.query(
+//            "Hash",
+//            arrayOf("id", "hash"),
+//            "hash = ?",
+//            arrayOf(encrypt(iv.iv.decodeToString())),
+//            null,
+//            null,
+//            null
+//        )
+        val cursor = db.rawQuery("SELECT * FROM Hash", null)
+        println("ciphertext: ${encrypt(iv.iv.decodeToString())}")
+        with(cursor) {
+            while (moveToNext()) {
+                println("db result: " + getString(getColumnIndexOrThrow("hash")))
+                println("db result decrypted: " + decrypt(getString(getColumnIndexOrThrow("hash"))))
+            }
+//            return if (moveToNext()) {
+//                db.close()
+//                true
+//            } else {
+//                db.close()
+//                false
+//            }
+        }
+        db.close()
+        return true
+    }
+
+    /**
+     * ========Static functions========
      */
     companion object {
         /**
