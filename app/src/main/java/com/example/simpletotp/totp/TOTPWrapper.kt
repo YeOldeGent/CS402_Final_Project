@@ -25,7 +25,6 @@ import kotlin.math.absoluteValue
  * This is an all in one class to contain the TOTP keys in one place. Handles everything from generating codes to storing and modifying keys on disk.
  * @param pin: pin used to encrypt/decrypt TOTP keys from the disk
  */
-@RequiresApi(Build.VERSION_CODES.O)
 class TOTPWrapper(private var pin: String, context: Context) {
     private val entries = ArrayList<TOTPEntry>()
     private val secretKey: SecretKey
@@ -42,100 +41,91 @@ class TOTPWrapper(private var pin: String, context: Context) {
 
         // ========INITIALIZE CRYPTOGRAPHY========
 
-        // NOTE: secretKey is currently changing every time due to secureRandom being... random...
-        // TODO: implement salt and properly hash pin to use as secret key
-        // RESOURCES: https://www.novixys.com/blog/aes-encryption-decryption-password-java/
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
+            throw Error("Incorrect SDK version")
+        else {
+            // ========PIN VALIDATION========
 
-        // }----ATTEMPT 1----{
-        // initialize secret key hash
-//        val keygen = KeyGenerator.getInstance("AES")
-//        val secureRandom = SecureRandom.getInstance("SHA1PrNG")
-//        secureRandom.setSeed(pin.toByteArray())
-//        keygen.init(256, secureRandom)
-//        secretKey = keygen.generateKey()
-//        // initialize initial vector
-//        val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
-//        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-//        iv = IvParameterSpec(cipher.iv)
-//        // delete plaintext pin from memory to be safe
-//        pin = ""
-
-//        println("secret key: ${secretKey.encoded.decodeToString()}")
-//        for (i in 1 until 5) {
-//            for (element in iv.iv)
-//                print(element)
-//            println()
-//            val encrypted = encrypt(iv.iv.decodeToString())
-//            println("IV: ${iv.iv.decodeToString()}")
-//            println("Encrypted iv: $encrypted")
-//            println("Encrypted and unencrypted iv: ${decrypt(encrypted)}")
-//        }
-
-        // ========PIN VALIDATION========
-
-        /**
-         * ENCRYPTION NOTES:
-         * - Using PBE (Password Base Encryption)
-         *  - Password and salt combined to create AES key
-         * - IV used similar to salt, but in combination with AES key
-         * - IV and salt safe to store in DB in plaintext
-         */
-        if (!dbExists(context)) {
-            // db does not exist - create new secret key, salt, and iv
-            println("DB DOES NOT EXIST")
-            // ---- create secret key and iv strings ----
-            val salt = hashString("SHA-256", System.currentTimeMillis().toString())
-            val pinHash = hashString("SHA-256", pin)
-            // ---- INIT CRYPTO START ----
-            val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
-            val spec = PBEKeySpec(
-                pinHash.toCharArray(),
-                Base64.getDecoder().decode(salt),
-                1000,
-                256
-            )
-            val tmp = factory.generateSecret(spec)
-            secretKey = SecretKeySpec(tmp.encoded, "AES")
-            val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-            iv = IvParameterSpec(cipher.iv)
-            // ---- INIT CRYPTO END ----
-            val ivString = cipher.iv.toString()
-            // save salt, iv, and hashed secretKeyString in db
-            if (!storeKeys(context, secretKey.encoded.toString(), ivString, salt))
-                throw FileNotFoundException("Issues connecting with database")
-        } else {
-            // db exists, get iv and salt to validate pin
-            println("DB EXISTS")
-            // get keys
-            val map = getKeys(context)
-            val salt = map["salt"]
-            val ivString = map["iv"]
-            val secretKeyHash = map["secret key"]
-            if (salt == null || ivString == null || secretKeyHash == null)
-                throw FileNotFoundException("Either the database could not be connected to or the keys were not saved")
-            val pinHash = hashString("SHA-256", pin)
-            // ---- INIT CRYTPO START ----
-            val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
-            val spec = PBEKeySpec(
-                pinHash.toCharArray(),
-                Base64.getDecoder().decode(salt),
-                1000,
-                256
-            )
-            val tmp = factory.generateSecret(spec)
-            secretKey = SecretKeySpec(tmp.encoded, "AES")
-            val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-            iv = IvParameterSpec(cipher.iv)
-            // ---- INIT CRYPTO END ----
-            if (hashString("SHA-256", secretKey.encoded.toString()) != secretKeyHash)
-                throw InvalidKeyException("Incorrect pin")
-//            if (!correctPin(context))
-//                throw InvalidKeyException("Incorrect pin")
+            /**
+             * ENCRYPTION NOTES:
+             * - Using PBE (Password Base Encryption)
+             *  - Password and salt combined to create AES key
+             * - IV used similar to salt, but in combination with AES key
+             * - IV and salt safe to store in DB in plaintext
+             */
+            if (!dbExists(context)) {
+                // db does not exist - create new secret key, salt, and iv
+                println("DB DOES NOT EXIST")
+                // ---- create secret key and iv strings ----
+                val salt = hashString("SHA-256", System.currentTimeMillis().toString())
+                val pinHash = hashString("SHA-256", pin)
+                // ---- INIT CRYPTO START ----
+                val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+                val spec = PBEKeySpec(
+                    pinHash.toCharArray(),
+                    Base64.getDecoder().decode(salt),
+                    1000,
+                    256
+                )
+                val tmp = factory.generateSecret(spec)
+                secretKey = SecretKeySpec(tmp.encoded, "AES")
+                val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+                iv = IvParameterSpec(cipher.iv)
+                // ---- INIT CRYPTO END ----
+                val ivString = cipher.iv.toString()
+                // save salt, iv, and hashed secretKeyString in db
+                if (!storeKeys(context, secretKey.encoded.decodeToString(), ivString, salt))
+                    throw FileNotFoundException("Issues connecting with database")
+            } else {
+                // db exists, get iv and salt to validate pin
+                println("DB EXISTS")
+                // get keys
+                val map = getKeys(context)
+                val salt = map["salt"]
+                val ivString = map["iv"]
+                val secretKeyHash = map["secret key"]
+                if (salt == null || ivString == null || secretKeyHash == null)
+                    throw FileNotFoundException("Either the database could not be connected to or the keys were not saved")
+                val pinHash = hashString("SHA-256", pin)
+                // ---- INIT CRYTPO START ----
+                val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+                val spec = PBEKeySpec(
+                    pinHash.toCharArray(),
+                    Base64.getDecoder().decode(salt),
+                    1000,
+                    256
+                )
+                val tmp = factory.generateSecret(spec)
+                secretKey = SecretKeySpec(tmp.encoded, "AES")
+                val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+                iv = IvParameterSpec(cipher.iv)
+                // ---- INIT CRYPTO END ----
+                println("SECRET KEY HASH: $secretKeyHash")
+                println(
+                    "TEST KEY HASH: ${
+                        hashString(
+                            "SHA-256",
+                            secretKey.encoded.decodeToString()
+                        )
+                    }"
+                )
+                println(
+                    "TEST KEY HASH: ${
+                        hashString(
+                            "SHA-256",
+                            secretKey.encoded.decodeToString()
+                        )
+                    }"
+                )
+                if (hashString("SHA-256", secretKey.encoded.decodeToString()) != secretKeyHash)
+                    throw InvalidKeyException("Incorrect pin")
+                println("CORRECT PIN")
+            }
+            // ========READ ALL DB ENTRIES========
+            dbReadAll(context)
         }
-        // ========READ ALL DB ENTRIES========
-        dbReadAll(context)
     }
 
     /**
@@ -170,7 +160,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
         ivString: String,
         salt: String
     ): Boolean {
-        println("SAVING CIPHERTEXT")
+        println("SAVING KEYS")
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.writableDatabase
         db.execSQL(TOTPEntryHelper.KeysContract.SQL_DELETE_KEYS)
