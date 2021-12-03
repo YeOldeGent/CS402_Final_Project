@@ -12,6 +12,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SimpleTOTP">
         <activity
+            android:name=".ListViewActivity"
+            android:exported="false" />
+        <activity
             android:name=".QRActivity"
             android:exported="true" />
         <activity

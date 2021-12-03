@@ -4,6 +4,7 @@ package com.example.simpletotp
 import android.content.DialogInterface
 
 import android.content.Context
+import android.content.Intent
 
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
@@ -28,7 +29,7 @@ class MainActivity : AppCompatActivity() {
 
 
     fun testTOTP(view: View) {
-
+        //this is called from the activity_main.xml
         val submitButton = findViewById<Button>(R.id.submit_Button)
         var totp: TOTPWrapper?
         totp = null
@@ -36,6 +37,10 @@ class MainActivity : AppCompatActivity() {
         println(pin)
         try {
             totp = TOTPWrapper(pin)
+
+                val intent = Intent(this, ListViewActivity::class.java)
+                startActivity(intent)
+
         }catch (e: InvalidParameterException){
             val dialogBuilder = AlertDialog.Builder(this)
             dialogBuilder.setMessage("Wrong Pin")
