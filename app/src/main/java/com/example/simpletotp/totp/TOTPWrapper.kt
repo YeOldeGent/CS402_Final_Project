@@ -55,7 +55,6 @@ class TOTPWrapper(private var pin: String, context: Context) {
              */
             if (!dbExists(context)) {
                 // db does not exist - create new secret key, salt, and iv
-                println("DB DOES NOT EXIST")
                 // ---- create secret key and iv strings ----
                 val salt = hashString("SHA-256", System.currentTimeMillis().toString())
                 val pinHash = hashString("SHA-256", pin)
@@ -73,13 +72,12 @@ class TOTPWrapper(private var pin: String, context: Context) {
                 cipher.init(Cipher.ENCRYPT_MODE, secretKey)
                 iv = IvParameterSpec(cipher.iv)
                 // ---- INIT CRYPTO END ----
-                val ivString = cipher.iv.toString()
+                val ivString = Base64.getEncoder().encodeToString(cipher.iv)
                 // save salt, iv, and hashed secretKeyString in db
                 if (!storeKeys(context, secretKey.encoded.decodeToString(), ivString, salt))
                     throw FileNotFoundException("Issues connecting with database")
             } else {
                 // db exists, get iv and salt to validate pin
-                println("DB EXISTS")
                 // get keys
                 val map = getKeys(context)
                 val salt = map["salt"]
@@ -99,26 +97,9 @@ class TOTPWrapper(private var pin: String, context: Context) {
                 val tmp = factory.generateSecret(spec)
                 secretKey = SecretKeySpec(tmp.encoded, "AES")
                 val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
-                cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-                iv = IvParameterSpec(cipher.iv)
+                iv = IvParameterSpec(Base64.getDecoder().decode(ivString))
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey, iv)
                 // ---- INIT CRYPTO END ----
-                println("SECRET KEY HASH: $secretKeyHash")
-                println(
-                    "TEST KEY HASH: ${
-                        hashString(
-                            "SHA-256",
-                            secretKey.encoded.decodeToString()
-                        )
-                    }"
-                )
-                println(
-                    "TEST KEY HASH: ${
-                        hashString(
-                            "SHA-256",
-                            secretKey.encoded.decodeToString()
-                        )
-                    }"
-                )
                 if (hashString("SHA-256", secretKey.encoded.decodeToString()) != secretKeyHash)
                     throw InvalidKeyException("Incorrect pin")
                 println("CORRECT PIN")
@@ -187,38 +168,6 @@ class TOTPWrapper(private var pin: String, context: Context) {
         return true
     }
 
-    private fun correctPin(context: Context): Boolean {
-        println("TESTING PIN")
-        val dbHelper = TOTPEntryHelper(context)
-        val db = dbHelper.readableDatabase
-//        val cursor = db.query(
-//            "Hash",
-//            arrayOf("id", "hash"),
-//            "hash = ?",
-//            arrayOf(encrypt(iv.iv.decodeToString())),
-//            null,
-//            null,
-//            null
-//        )
-        val cursor = db.rawQuery("SELECT * FROM Hash", null)
-        println("ciphertext: ${encrypt(iv.iv.decodeToString())}")
-        with(cursor) {
-            while (moveToNext()) {
-                println("db result: " + getString(getColumnIndexOrThrow("hash")))
-                println("db result decrypted: " + decrypt(getString(getColumnIndexOrThrow("hash"))))
-            }
-//            return if (moveToNext()) {
-//                db.close()
-//                true
-//            } else {
-//                db.close()
-//                false
-//            }
-        }
-        db.close()
-        return true
-    }
-
     /**
      * ========Static functions========
      */
@@ -242,7 +191,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
     /**
      * Creates a new TOTP entry to the list and returns the new entry in safe form.
      */
-    fun createEntry(name: String, key: String, context: Context): SafeTOTPEntry? {
+    fun createEntry(name: String, key: String, context: Context): SafeTOTPEntry {
         entries.add(
             TOTPEntry(
                 key,
@@ -259,7 +208,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
         val newEntry = entries[entries.lastIndex]
         // add new entry to db
         if (dbCreate(newEntry, context) == -1)
-            return null
+            throw FileNotFoundException("Error communicating with database")
 
         return SafeTOTPEntry(
             newEntry.id,
@@ -275,10 +224,14 @@ class TOTPWrapper(private var pin: String, context: Context) {
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
-            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID, entry.id)
-            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE, entry.key)
-            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, entry.name)
-            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE, entry.crypto)
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID, encrypt(entry.id))
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE, encrypt(entry.key))
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, encrypt(entry.name))
+            put(
+                TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE,
+                encrypt(entry.crypto)
+            )
+            // leave favorite unencrypted for now bc it's a boolean
             put(
                 TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE,
                 entry.favorite
@@ -325,10 +278,10 @@ class TOTPWrapper(private var pin: String, context: Context) {
             while (moveToNext())
                 entries.add(
                     TOTPEntry(
-                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE)),
-                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID)),
-                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE)),
-                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE)),
+                        decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE))),
+                        decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID))),
+                        decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE))),
+                        decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE))),
                         getInt(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE)) == 1
                     )
                 )
@@ -349,7 +302,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
         entry.name = safeTOTPEntry.name
         entry.favorite = safeTOTPEntry.favorite
         // update value on disk
-        if (dbUpdate(entry, context) < 1)
+        if (dbUpdate(entry, context) != 0)
             return false
         return true
     }
@@ -361,14 +314,14 @@ class TOTPWrapper(private var pin: String, context: Context) {
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
-            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, entry.name)
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, encrypt(entry.name))
             put(
                 TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE,
                 entry.favorite
             )
         }
         val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
-        val selectionArgs = arrayOf(entry.id)
+        val selectionArgs = arrayOf(encrypt(entry.id))
         val count = db.update(
             TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
             values,
@@ -401,7 +354,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.writableDatabase
         val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
-        val selectionArgs = arrayOf(entry.id)
+        val selectionArgs = arrayOf(encrypt(entry.id))
         val count = db.delete(
             TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
             selection,
@@ -454,7 +407,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
     /**
      * Encrypt the given plaintext with AES CBC
      */
-    fun encrypt(plaintext: String): String {
+    private fun encrypt(plaintext: String): String {
         val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, iv)
         val ciphertext: ByteArray = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
@@ -468,10 +421,11 @@ class TOTPWrapper(private var pin: String, context: Context) {
     /**
      * Decrypt the given ciphertext with AES CBC
      */
-    fun decrypt(ciphertext: String): String {
+    private fun decrypt(ciphertext: String): String {
         val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
         cipher.init(Cipher.DECRYPT_MODE, secretKey, iv)
         val plaintext: ByteArray = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // TODO: bad_decrypt error when decrypting id :(
             cipher.doFinal(Base64.getDecoder().decode(ciphertext))
         } else {
             throw Error("Incorrect SDK version")
@@ -479,6 +433,9 @@ class TOTPWrapper(private var pin: String, context: Context) {
         return plaintext.toString(Charsets.UTF_8)
     }
 
+    /**
+     * Hashes string. Can use any type of hash (i.e. MD5, SHA-1, SHA256, etc.)
+     */
     private fun hashString(type: String, input: String): String {
         val bytes = MessageDigest
             .getInstance(type)
