@@ -113,6 +113,9 @@ class TOTPWrapper(private var pin: String, context: Context) {
      * ========STARTUP HELPERS========
      */
 
+    /**
+     * Gets keys from Keys table in database
+     */
     @SuppressLint("Recycle")
     private fun getKeys(context: Context): HashMap<String, String> {
         val dbHelper = TOTPEntryHelper(context)
@@ -184,6 +187,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
 
     /**
      * ========ENTRY MANIPULATION========
+     * CRUD functions
      */
 
     // }----Create----{
@@ -425,7 +429,6 @@ class TOTPWrapper(private var pin: String, context: Context) {
         val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
         cipher.init(Cipher.DECRYPT_MODE, secretKey, iv)
         val plaintext: ByteArray = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            // TODO: bad_decrypt error when decrypting id :(
             cipher.doFinal(Base64.getDecoder().decode(ciphertext))
         } else {
             throw Error("Incorrect SDK version")
