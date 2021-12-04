@@ -183,6 +183,16 @@ class TOTPWrapper(private var pin: String, context: Context) {
             val dbFile = context.getDatabasePath(TOTPEntryHelper.DATABASE_NAME)
             return dbFile.exists()
         }
+
+        /**
+         * Returns the amount of time (in seconds) left in the current code. When the value is 0,
+         * then it is time to generate a new code.
+         */
+        @JvmStatic
+        fun timeLeftInCode(): Int {
+            val sec = System.currentTimeMillis().toString().substring(0, 10).toLong() % 60
+            return if ((sec % 30).toInt() == 0) 0 else ((sec % 30).toInt() - 30).absoluteValue
+        }
     }
 
     /**
@@ -375,7 +385,6 @@ class TOTPWrapper(private var pin: String, context: Context) {
     /**
      * Generates a TOTP code for the entry with the given id, or null if said entry does not exist.
      * @param id: id of entry to be used
-     * @param now: current time in seconds I think? Use `System.currentTimeMillis().toString().substring(0, 10).toLong()`
      *
      * Note: to get time left on code, use the following:
      * ```
@@ -385,7 +394,8 @@ class TOTPWrapper(private var pin: String, context: Context) {
      * When `sec % 30 == 0`, it is time to generate a new TOTP code. Could use a thread which
      * checks the time every 0.5 seconds or so to see if the current code has expired?
      */
-    fun getTOTPcode(id: String, now: Long): String? {
+    fun getTOTPcode(id: String): String? {
+        val now = System.currentTimeMillis().toString().substring(0, 10).toLong()
         val entry = entries.find { it.id == id } ?: return null
         val x: Long = 30
         val t: Long = now / x
@@ -393,15 +403,6 @@ class TOTPWrapper(private var pin: String, context: Context) {
         while (steps.length < 16)
             steps = "0$steps"
         return TOTP.generateTOTP(entry.key, steps, "6", entry.crypto)
-    }
-
-    /**
-     * Returns the amount of time (in seconds) left in the current code. When the value is 0,
-     * then it is time to generate a new code.
-     */
-    fun timeLeftInCode(): Int {
-        val sec = System.currentTimeMillis().toString().substring(0, 10).toLong() % 60
-        return if ((sec % 30).toInt() == 0) 0 else ((sec % 30).toInt() - 30).absoluteValue
     }
 
     /**
@@ -437,7 +438,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
     }
 
     /**
-     * Hashes string. Can use any type of hash (i.e. MD5, SHA-1, SHA256, etc.)
+     * Hashes string. Can use any type of hash (i.e. MD5, SHA-1, SHA-256, etc.)
      */
     private fun hashString(type: String, input: String): String {
         val bytes = MessageDigest

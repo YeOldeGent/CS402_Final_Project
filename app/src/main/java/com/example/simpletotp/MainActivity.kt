@@ -34,8 +34,7 @@ class MainActivity : AppCompatActivity() {
             this
         ) ?: return
         safeTOTPEntries.add(entry)
-        val now = System.currentTimeMillis().toString().substring(0, 10).toLong()
-        println("TOTP code: " + totp.getTOTPcode(safeTOTPEntries[0].id, now))
+        println("TOTP code: " + totp.getTOTPcode(safeTOTPEntries[0].id))
     }
 
     private fun testDB() {
