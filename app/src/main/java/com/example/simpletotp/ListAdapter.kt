@@ -1,77 +1,69 @@
 package com.example.simpletotp
 
 import android.content.Context
-import android.graphics.Typeface
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.BaseExpandableListAdapter
 import android.widget.TextView
-import java.util.HashMap
+import androidx.recyclerview.widget.RecyclerView
 
-class CustomExpandableListAdapter internal constructor(
-    private val context: Context,
-    private val titleList: List<String>, //the string on the main thing
-    private val dataList: HashMap<String, List<String>>
-) : BaseExpandableListAdapter() {
-    override fun getChild(listPosition: Int, expandedListPosition: Int): Any {
-        return this.dataList[this.titleList[listPosition]]!![expandedListPosition]
+
+
+public class ListAdapter(context: Context, var coffee: ArrayList<String>, var scoffee: ArrayList<Boolean> )
+    : RecyclerView.Adapter<ListAdapter.KoffeeHolder>() {
+
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int)
+            : ListAdapter.KoffeeHolder {
+        val view = LayoutInflater.from(parent.getContext()).inflate(R.layout.list_item, parent, false)
+        return KoffeeHolder(view)
     }
-    override fun getChildId(listPosition: Int, expandedListPosition: Int): Long {
-        return expandedListPosition.toLong()
-    }
-    override fun getChildView(
-        listPosition: Int,
-        expandedListPosition: Int,
-        isLastChild: Boolean,
-        convertView: View?,
-        parent: ViewGroup
-    ): View {
-        var convertView = convertView
-        val expandedListText = getChild(listPosition, expandedListPosition) as String
-        if (convertView == null) {
-            val layoutInflater =
-                this.context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-            convertView = layoutInflater.inflate(R.layout.list_item, null)
+
+    override fun getItemCount() = coffee.size
+
+    override fun onBindViewHolder(holder: KoffeeHolder, position: Int) {
+        val acoffee = coffee[position]
+        holder.apply {
+            titleTextView.text = acoffee
+            var sscolor = "#ffffff"
+            if (scoffee[position]) {
+                sscolor = "#cccccc"
+            }
+            titleTextView.setBackgroundColor(Color.parseColor(sscolor))
         }
-        val expandedListTextView = convertView!!.findViewById<TextView>(R.id.expandedListItem)
-        expandedListTextView.text = expandedListText
-        return convertView
     }
-    override fun getChildrenCount(listPosition: Int): Int {
-        return this.dataList[this.titleList[listPosition]]!!.size
-    }
-    override fun getGroup(listPosition: Int): Any {
-        return this.titleList[listPosition]
-    }
-    override fun getGroupCount(): Int {
-        return this.titleList.size
-    }
-    override fun getGroupId(listPosition: Int): Long {
-        return listPosition.toLong()
-    }
-    override fun getGroupView(
-        listPosition: Int,
-        isExpanded: Boolean,
-        convertView: View?,
-        parent: ViewGroup
-    ): View {
-        var convertView = convertView
-        val listTitle = getGroup(listPosition) as String
-        if (convertView == null) {
-            val layoutInflater =
-                this.context.getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-            convertView = layoutInflater.inflate(R.layout.list_item, null)
+
+//    class KoffeeHolder(view: View) : RecyclerView.ViewHolder(view) {
+//
+//        val titleTextView: TextView = view.findViewById(R.id.item_name)
+//    }
+
+    inner class KoffeeHolder(view: View)
+        : RecyclerView.ViewHolder(view), View.OnClickListener {
+        val mostParentView: View = view
+        val firstChild: View = view.findViewById(R.id.list_item)
+        val titleTextView: TextView = firstChild.findViewById(R.id.contact_name)
+        var kSelect: Boolean = false
+
+        // add init into the class object
+        init {
+            //The next line is the og provided line that didn't work
+            itemView.setOnClickListener(this)
         }
-        val listTitleTextView = convertView!!.findViewById<TextView>(R.id.expandedListItem)
-        listTitleTextView.setTypeface(null, Typeface.BOLD)
-        listTitleTextView.text = listTitle
-        return convertView
-    }
-    override fun hasStableIds(): Boolean {
-        return false
-    }
-    override fun isChildSelectable(listPosition: Int, expandedListPosition: Int): Boolean {
-        return true
+
+        override fun onClick(v: View) {
+            //toggle selection
+            var apos = getBindingAdapterPosition()
+            kSelect = scoffee[apos]
+            kSelect = !kSelect
+            scoffee[apos] = kSelect
+
+            var sscolor = "#ffffff"
+            if (kSelect) {
+                sscolor = "#cccccc"
+            }
+            titleTextView.setBackgroundColor(Color.parseColor(sscolor))
+        }
     }
 }

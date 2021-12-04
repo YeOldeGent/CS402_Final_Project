@@ -1,32 +1,15 @@
 package com.example.simpletotp
 
-internal object ListData {
-    val data: HashMap<String, List<String>>
-        get() {
-            val expandableListDetail =
-                HashMap<String, List<String>>()
-            val myFavCricketPlayers: MutableList<String> =
-                ArrayList()
-            myFavCricketPlayers.add("MS.Dhoni")
-            myFavCricketPlayers.add("Sehwag")
-            myFavCricketPlayers.add("Shane Watson")
-            myFavCricketPlayers.add("Ricky Ponting")
-            myFavCricketPlayers.add("Shahid Afridi")
-            val myFavFootballPlayers: MutableList<String> = ArrayList()
-            myFavFootballPlayers.add("Cristiano Ronaldo")
-            myFavFootballPlayers.add("Lionel Messi")
-            myFavFootballPlayers.add("Gareth Bale")
-            myFavFootballPlayers.add("Neymar JR")
-            myFavFootballPlayers.add("David de Gea")
-            val myFavTennisPlayers: MutableList<String> = ArrayList()
-            myFavTennisPlayers.add("Roger Federer")
-            myFavTennisPlayers.add("Rafael Nadal")
-            myFavTennisPlayers.add("Andy Murray")
-            myFavTennisPlayers.add("Novak Jokovic")
-            myFavTennisPlayers.add("Sania Mirza")
-            expandableListDetail["CRICKET PLAYERS"] = myFavCricketPlayers
-            expandableListDetail["FOOTBALL PLAYERS"] = myFavFootballPlayers
-            expandableListDetail["TENNIS PLAYERS"] = myFavTennisPlayers
-            return expandableListDetail
+class ListData(val name: String, val isOnline: Boolean) {
+
+    companion object {
+        private var lastContactId = 0
+        fun createContactsList(numContacts: Int): ArrayList<ListData> {
+            val contacts = ArrayList<ListData>()
+            for (i in 1..numContacts) {
+                contacts.add(ListData("Person " + ++lastContactId, i <= numContacts / 2))
+            }
+            return contacts
         }
+    }
 }
