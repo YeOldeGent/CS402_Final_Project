@@ -30,8 +30,17 @@ class TOTPEntryHelper(context: Context) :
         const val SQL_DELETE_ENTRIES = "DROP TABLE IF EXISTS ${TOTPEntry.TABLE_NAME}"
     }
 
+    object KeysContract {
+        const val SQL_CREATE_KEYS =
+            "CREATE TABLE Keys (id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "label TEXT," +
+                    "value TEXT)"
+        const val SQL_DELETE_KEYS = "DROP TABLE IF EXISTS Keys"
+    }
+
     override fun onCreate(database: SQLiteDatabase) {
         database.execSQL(TOTPEntryContract.SQL_CREATE_ENTRIES)
+        database.execSQL(KeysContract.SQL_CREATE_KEYS)
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {

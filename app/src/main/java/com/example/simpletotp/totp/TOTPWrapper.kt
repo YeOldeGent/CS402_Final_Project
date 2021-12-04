@@ -1,21 +1,24 @@
 package com.example.simpletotp.totp
 
+import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
-import android.database.DatabaseErrorHandler
 import android.os.Build
+import androidx.annotation.RequiresApi
 import com.example.simpletotp.database.TOTPEntryHelper
 import java.io.FileNotFoundException
 import java.security.InvalidKeyException
 import java.security.InvalidParameterException
-import java.security.SecureRandom
+import java.security.MessageDigest
 import java.util.*
 import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.IvParameterSpec
-import kotlin.NoSuchElementException
+import javax.crypto.spec.PBEKeySpec
+import javax.crypto.spec.SecretKeySpec
 import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 import kotlin.math.absoluteValue
 
 /**
@@ -37,30 +40,139 @@ class TOTPWrapper(private var pin: String, context: Context) {
             throw InvalidParameterException("Provided pin is either null or not long enough")
 
         // ========INITIALIZE CRYPTOGRAPHY========
-        // initialize secret key hash
-        val keygen = KeyGenerator.getInstance("AES")
-        val secureRandom = SecureRandom.getInstance("SHA1PrNG")
-        secureRandom.setSeed(pin.toByteArray())
-        keygen.init(256, secureRandom)
-        secretKey = keygen.generateKey()
-        // initialize initial vector
-        val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-        iv = IvParameterSpec(cipher.iv)
-        // delete plaintext pin from memory to be safe
-        pin = ""
 
-        // ========DB INITIALIZATION========
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)
+            throw Error("Incorrect SDK version")
+        else {
+            // ========PIN VALIDATION========
 
-        // ========PIN VALIDATION========
-        // if pin is incorrect, throw an error
-        if (false)
-            throw InvalidKeyException("Incorrect pin")
-        dbReadAll(context)
+            /**
+             * ENCRYPTION NOTES:
+             * - Using PBE (Password Base Encryption)
+             *  - Password and salt combined to create AES key
+             * - IV used similar to salt, but in combination with AES key
+             * - IV and salt safe to store in DB in plaintext
+             */
+            if (!dbExists(context)) {
+                // db does not exist - create new secret key, salt, and iv
+                // ---- create secret key and iv strings ----
+                val salt = hashString("SHA-256", System.currentTimeMillis().toString())
+                val pinHash = hashString("SHA-256", pin)
+                // ---- INIT CRYPTO START ----
+                val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+                val spec = PBEKeySpec(
+                    pinHash.toCharArray(),
+                    Base64.getDecoder().decode(salt),
+                    1000,
+                    256
+                )
+                val tmp = factory.generateSecret(spec)
+                secretKey = SecretKeySpec(tmp.encoded, "AES")
+                val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+                iv = IvParameterSpec(cipher.iv)
+                // ---- INIT CRYPTO END ----
+                val ivString = Base64.getEncoder().encodeToString(cipher.iv)
+                // save salt, iv, and hashed secretKeyString in db
+                if (!storeKeys(context, secretKey.encoded.decodeToString(), ivString, salt))
+                    throw FileNotFoundException("Issues connecting with database")
+            } else {
+                // db exists, get iv and salt to validate pin
+                // get keys
+                val map = getKeys(context)
+                val salt = map["salt"]
+                val ivString = map["iv"]
+                val secretKeyHash = map["secret key"]
+                if (salt == null || ivString == null || secretKeyHash == null)
+                    throw FileNotFoundException("Either the database could not be connected to or the keys were not saved")
+                val pinHash = hashString("SHA-256", pin)
+                // ---- INIT CRYTPO START ----
+                val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1")
+                val spec = PBEKeySpec(
+                    pinHash.toCharArray(),
+                    Base64.getDecoder().decode(salt),
+                    1000,
+                    256
+                )
+                val tmp = factory.generateSecret(spec)
+                secretKey = SecretKeySpec(tmp.encoded, "AES")
+                val cipher = Cipher.getInstance("AES/CBC/PKCS7Padding")
+                iv = IvParameterSpec(Base64.getDecoder().decode(ivString))
+                cipher.init(Cipher.ENCRYPT_MODE, secretKey, iv)
+                // ---- INIT CRYPTO END ----
+                if (hashString("SHA-256", secretKey.encoded.decodeToString()) != secretKeyHash)
+                    throw InvalidKeyException("Incorrect pin")
+                println("CORRECT PIN")
+            }
+            // ========READ ALL DB ENTRIES========
+            dbReadAll(context)
+        }
     }
 
     /**
-     * Static functions
+     * ========STARTUP HELPERS========
+     */
+
+    /**
+     * Gets keys from Keys table in database
+     */
+    @SuppressLint("Recycle")
+    private fun getKeys(context: Context): HashMap<String, String> {
+        val dbHelper = TOTPEntryHelper(context)
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT * FROM Keys",
+            null
+        ) ?: throw FileNotFoundException("Database does not exist or was not found")
+        val map = HashMap<String, String>()
+        with(cursor) {
+            while (moveToNext()) {
+                map[getString(getColumnIndexOrThrow("label"))] =
+                    getString(getColumnIndexOrThrow("value"))
+            }
+        }
+        db.close()
+        return map
+    }
+
+    /**
+     * Store keys in Keys table. Stores hash of secret key
+     */
+    private fun storeKeys(
+        context: Context,
+        secretKeyString: String,
+        ivString: String,
+        salt: String
+    ): Boolean {
+        println("SAVING KEYS")
+        val dbHelper = TOTPEntryHelper(context)
+        val db = dbHelper.writableDatabase
+        db.execSQL(TOTPEntryHelper.KeysContract.SQL_DELETE_KEYS)
+        db.execSQL(TOTPEntryHelper.KeysContract.SQL_CREATE_KEYS)
+        val arr = arrayOf("secret key", "iv", "salt")
+        arr.forEach {
+            val values = ContentValues().apply {
+                put("label", it)
+                put(
+                    "value", when (it) {
+                        "secret key" -> hashString("SHA-256", secretKeyString)
+                        "iv" -> ivString
+                        else -> salt
+                    }
+                )
+            }
+            val id = db.insert("Keys", null, values)
+            if (id == -1L) {
+                db.close()
+                return false
+            }
+        }
+        db.close()
+        return true
+    }
+
+    /**
+     * ========Static functions========
      */
     companion object {
         /**
@@ -75,6 +187,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
 
     /**
      * ========ENTRY MANIPULATION========
+     * CRUD functions
      */
 
     // }----Create----{
@@ -82,7 +195,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
     /**
      * Creates a new TOTP entry to the list and returns the new entry in safe form.
      */
-    fun createEntry(name: String, key: String, context: Context): SafeTOTPEntry? {
+    fun createEntry(name: String, key: String, context: Context): SafeTOTPEntry {
         entries.add(
             TOTPEntry(
                 key,
@@ -99,7 +212,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
         val newEntry = entries[entries.lastIndex]
         // add new entry to db
         if (dbCreate(newEntry, context) == -1)
-            return null
+            throw FileNotFoundException("Error communicating with database")
 
         return SafeTOTPEntry(
             newEntry.id,
@@ -115,10 +228,14 @@ class TOTPWrapper(private var pin: String, context: Context) {
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
-            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID, entry.id)
-            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE, entry.key)
-            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, entry.name)
-            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE, entry.crypto)
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID, encrypt(entry.id))
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE, encrypt(entry.key))
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, encrypt(entry.name))
+            put(
+                TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE,
+                encrypt(entry.crypto)
+            )
+            // leave favorite unencrypted for now bc it's a boolean
             put(
                 TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE,
                 entry.favorite
@@ -165,10 +282,10 @@ class TOTPWrapper(private var pin: String, context: Context) {
             while (moveToNext())
                 entries.add(
                     TOTPEntry(
-                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE)),
-                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID)),
-                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE)),
-                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE)),
+                        decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE))),
+                        decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID))),
+                        decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE))),
+                        decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE))),
                         getInt(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE)) == 1
                     )
                 )
@@ -189,7 +306,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
         entry.name = safeTOTPEntry.name
         entry.favorite = safeTOTPEntry.favorite
         // update value on disk
-        if (dbUpdate(entry, context) < 1)
+        if (dbUpdate(entry, context) != 0)
             return false
         return true
     }
@@ -201,14 +318,14 @@ class TOTPWrapper(private var pin: String, context: Context) {
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
-            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, entry.name)
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, encrypt(entry.name))
             put(
                 TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_FAVORITE_TITLE,
                 entry.favorite
             )
         }
         val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
-        val selectionArgs = arrayOf(entry.id)
+        val selectionArgs = arrayOf(encrypt(entry.id))
         val count = db.update(
             TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
             values,
@@ -241,7 +358,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.writableDatabase
         val selection = "${TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID} = ?"
-        val selectionArgs = arrayOf(entry.id)
+        val selectionArgs = arrayOf(encrypt(entry.id))
         val count = db.delete(
             TOTPEntryHelper.TOTPEntryContract.TOTPEntry.TABLE_NAME,
             selection,
@@ -294,7 +411,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
     /**
      * Encrypt the given plaintext with AES CBC
      */
-    fun encrypt(plaintext: String): String {
+    private fun encrypt(plaintext: String): String {
         val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, iv)
         val ciphertext: ByteArray = cipher.doFinal(plaintext.toByteArray(Charsets.UTF_8))
@@ -308,7 +425,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
     /**
      * Decrypt the given ciphertext with AES CBC
      */
-    fun decrypt(ciphertext: String): String {
+    private fun decrypt(ciphertext: String): String {
         val cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING")
         cipher.init(Cipher.DECRYPT_MODE, secretKey, iv)
         val plaintext: ByteArray = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -317,5 +434,26 @@ class TOTPWrapper(private var pin: String, context: Context) {
             throw Error("Incorrect SDK version")
         }
         return plaintext.toString(Charsets.UTF_8)
+    }
+
+    /**
+     * Hashes string. Can use any type of hash (i.e. MD5, SHA-1, SHA256, etc.)
+     */
+    private fun hashString(type: String, input: String): String {
+        val bytes = MessageDigest
+            .getInstance(type)
+            .digest(input.toByteArray())
+        return printHexBinary(bytes)
+    }
+
+    private fun printHexBinary(data: ByteArray): String {
+        val hexChars = "0123456789ABCDEF".toCharArray()
+        val r = StringBuilder(data.size * 2)
+        data.forEach { b ->
+            val i = b.toInt()
+            r.append(hexChars[i shr 4 and 0xF])
+            r.append(hexChars[i and 0xF])
+        }
+        return r.toString()
     }
 }
