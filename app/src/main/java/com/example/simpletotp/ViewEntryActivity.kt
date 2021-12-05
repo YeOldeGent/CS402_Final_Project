@@ -1,20 +1,19 @@
 package com.example.simpletotp
 
-import android.R.attr
 import android.graphics.Color
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.simpletotp.totp.TOTPWrapper
-import android.R.attr.label
 import android.content.*
 
 import com.example.simpletotp.totp.SafeTOTPEntry
 import android.os.CountDownTimer
+import android.text.InputType
+import android.widget.CheckBox
+import com.example.simpletotp.totp.TOTPWrapper.Companion.timeLeftInCode
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -30,13 +29,16 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
         val name = entry.name
 
         //get all the layout elements
-        val nameEdit = findViewById<EditText>(R.id.editTextName)
+        val nameEdit = findViewById<EditText>(R.id.textViewName)
         val code = findViewById<TextView>(R.id.textViewCode)
         val timer = findViewById<TextView>(R.id.timer)
-        val saveButton = findViewById<Button>(R.id.saveButton)
+        val saveButton = findViewById<Button>(R.id.changeButton)
         val copyButton = findViewById<Button>(R.id.copyButton)
         val doneButton = findViewById<Button>(R.id.doneButton)
         val deleteButton = findViewById<Button>(R.id.deleteButton)
+        val favoriteCheck = findViewById<CheckBox>(R.id.favoriteCheck)
+
+        favoriteCheck.isChecked = entry.favorite
 
         //make it so they can click the save button right away
         saveButton.setBackgroundColor(Color.DKGRAY)
@@ -46,16 +48,25 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
         nameEdit.setText(name)
 
         //get the code and set the text view
-        code.setText(wrapper.getTOTPcode(id, System.currentTimeMillis().toString().substring(0, 10).toLong()))
+        code.setText(wrapper.getTOTPcode(id))
 
         //start the timer, pass in the timer, code, and entry id
         newTimer(timer, code, id)
 
         //when you click save, save off the new name and disable the button again
         saveButton.setOnClickListener {
-            entry.name = nameEdit.text.toString()
-            saveButton.setBackgroundColor(Color.DKGRAY)
-            saveButton.isClickable = false
+            val editDialog: android.app.AlertDialog.Builder = android.app.AlertDialog.Builder(this)
+            editDialog.setTitle("Edit Name")
+            val input = EditText(this)
+            input.setHint("Enter Name")
+            input.inputType = InputType.TYPE_CLASS_TEXT
+            editDialog.setView(input)
+            editDialog.setPositiveButton("OK", DialogInterface.OnClickListener { dialog, which ->
+                entry.name = input.text.toString()
+                wrapper.updateEntry(entry, this)
+            })
+            editDialog.setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
+            editDialog.show()
         }
 
         //when clicking the copy button, save the code to the users clipboard
@@ -88,23 +99,21 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
             delDialog.show()
         }
 
-        //when you edit the name, make the save button clickable
-        nameEdit.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
-
-            override fun onTextChanged(s: CharSequence, start: Int,
-                                       before: Int, count: Int) {
-                saveButton.setBackgroundColor(Color.BLUE)
-                saveButton.isClickable = true
+        favoriteCheck.setOnCheckedChangeListener { buttonView, isChecked ->
+            if (isChecked) {
+                entry.favorite = true
+                wrapper.updateEntry(entry, this)
+            } else {
+                entry.favorite = false
+                wrapper.updateEntry(entry, this)
             }
+        }
 
-            override fun afterTextChanged(p0: Editable?) {}
-        })
     }
 
     //create a timer
     fun newTimer(timer: TextView, code: TextView, id: String) {
-        val timeLeft = wrapper.timeLeftInCode() * 1000
+        val timeLeft = timeLeftInCode() * 1000
         var timerText = "Time left: "
         object : CountDownTimer(timeLeft.toLong(), 1000) {
             //on every tick, update the timer text
@@ -115,7 +124,7 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
 
             //when the timer finished, create a new code, then a new timer
             override fun onFinish() {
-                code.setText(wrapper.getTOTPcode(id, System.currentTimeMillis().toString().substring(0, 10).toLong()))
+                code.setText(wrapper.getTOTPcode(id))
                 newTimer(timer, code, id)
             }
         }.start()

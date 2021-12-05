@@ -7,7 +7,7 @@
     tools:context=".NewEntryActivity">
 
     <EditText
-        android:id="@+id/editTextName"
+        android:id="@+id/textViewName"
         android:layout_width="360dp"
         android:layout_height="48dp"
         android:layout_marginTop="16dp"
@@ -29,10 +29,10 @@
         android:hint="Input key here"
         android:minHeight="48dp"
         android:inputType="textMultiLine"
-        app:layout_constraintEnd_toEndOf="@+id/editTextName"
+        app:layout_constraintEnd_toEndOf="@+id/textViewName"
         app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toStartOf="@+id/editTextName"
-        app:layout_constraintTop_toBottomOf="@+id/editTextName" />
+        app:layout_constraintStart_toStartOf="@+id/textViewName"
+        app:layout_constraintTop_toBottomOf="@+id/textViewName" />
 
     <Button
         android:id="@+id/submit"

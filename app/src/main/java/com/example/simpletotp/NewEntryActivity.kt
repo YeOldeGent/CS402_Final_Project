@@ -17,7 +17,7 @@ class NewEntryActivity(val wrapper: TOTPWrapper) : AppCompatActivity() {
         setContentView(R.layout.activity_newentry)
 
         //get all the elements from the xml file
-        val name = findViewById<EditText>(R.id.editTextName)
+        val name = findViewById<EditText>(R.id.textViewName)
         val key = findViewById<EditText>(R.id.editTextKey)
         val error = findViewById<TextView>(R.id.errorText)
         val submit: Button = findViewById(R.id.submit)
