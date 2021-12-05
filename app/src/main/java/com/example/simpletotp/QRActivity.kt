@@ -19,9 +19,11 @@ import com.budiyev.android.codescanner.CodeScannerView
 import com.budiyev.android.codescanner.DecodeCallback
 import com.budiyev.android.codescanner.ErrorCallback
 import com.budiyev.android.codescanner.ScanMode
+import com.example.simpletotp.totp.SafeTOTPEntry
+import com.example.simpletotp.totp.TOTPWrapper
 import java.util.jar.Manifest
 
-class QRActivity : AppCompatActivity() {
+class QRActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>) : AppCompatActivity() {
 
     private lateinit var codescanner: CodeScanner
 
@@ -58,7 +60,7 @@ class QRActivity : AppCompatActivity() {
             skipDialog.setMessage("Do you want to skip the scanner and manually input a key?")
             //if the press 'Yes', they will be brought to the add entry screen with two blank boxes
             skipDialog.setPositiveButton("Yes", DialogInterface.OnClickListener { dialog, which ->
-                val intent = Intent(this, NewEntryActivity::class.java)
+                val intent = Intent(this, NewEntryActivity(wrapper, entries)::class.java)
                 intent.putExtra("KEY","")
                 startActivity(intent)
             })
@@ -67,11 +69,27 @@ class QRActivity : AppCompatActivity() {
             skipDialog.show()
         }
 
+        val cancel = findViewById<View>(R.id.cancelButton)
+        cancel.setOnClickListener {
+            //when clicked, a message will pop up, making them confirm their choice
+            val cancelDialog: android.app.AlertDialog.Builder = android.app.AlertDialog.Builder(this)
+            cancelDialog.setTitle("Cancel?")
+            cancelDialog.setMessage("Do you want to go back to the list of entries?")
+            //if the press 'Yes', they will be brought to the add entry screen with two blank boxes
+            cancelDialog.setPositiveButton("Yes", DialogInterface.OnClickListener { dialog, which ->
+                val intent = Intent(this, MainActivity::class.java)
+                startActivity(intent)
+            })
+            //if the press 'Cancel', they can continue scanning as normal
+            cancelDialog.setNegativeButton("No", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
+            cancelDialog.show()
+        }
+
         //if it successfully scans a code, start the NewEntryActivity and send it the key
         codescanner.decodeCallback = DecodeCallback {
             runOnUiThread {
                 Toast.makeText(this, "Scan Result: ${it.text}", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, NewEntryActivity::class.java)
+                val intent = Intent(this, NewEntryActivity(wrapper, entries)::class.java)
                 intent.putExtra("KEY",it.text)
                 startActivity(intent)
             }

@@ -15,6 +15,9 @@
             android:name=".ListViewActivity"
             android:exported="true" />
         <activity
+            android:name=".ViewEntryActivity"
+            android:exported="true" />
+        <activity
             android:name=".QRActivity"
             android:exported="true" />
         <activity
