@@ -18,9 +18,6 @@ class ListViewActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_list_view)
 
-        val wrapper = intent.getSerializableExtra("wrapper") as TOTPWrapper
-        val entries = intent.getSerializableExtra("entries") as ArrayList<SafeTOTPEntry>
-
         var counter = 0
         val itemList = arrayListOf<String>("Arabic", "Robusta","Sumatra","Kona")
         val scoffee = arrayListOf<Boolean>(false, false, false, false)
@@ -40,12 +37,8 @@ class ListViewActivity : AppCompatActivity() {
          */
         fun addItem(newItem: String){
             val intent = Intent(this, QRActivity::class.java)
-            intent.putExtra("wrapper",wrapper)
-            intent.putExtra("entries",entries)
             startActivity(intent)
-            entries.forEach {
-                print(it)
-            }
+            Singleton.printEntries()
             counter += 1
             scoffee.add(false)
             itemList.add(newItem)

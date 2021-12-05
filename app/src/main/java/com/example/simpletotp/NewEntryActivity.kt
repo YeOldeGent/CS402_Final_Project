@@ -14,8 +14,6 @@ import com.example.simpletotp.totp.TOTPWrapper
 
 class NewEntryActivity : AppCompatActivity() {
 
-    val wrapper = intent.getSerializableExtra("wrapper") as TOTPWrapper
-    val entries = intent.getSerializableExtra("entries") as ArrayList<SafeTOTPEntry>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,10 +38,12 @@ class NewEntryActivity : AppCompatActivity() {
             if (name.text.length == 0) {
                 error.text = "Please enter a name!!"
             } else if (key.text.length == 40 || key.text.length == 64 || key.text.length == 128) {
+                var entries = Singleton.globalEntries() as ArrayList<SafeTOTPEntry>
+                var wrapper = Singleton.globalWrapper() as TOTPWrapper
                 entries.add(wrapper.createEntry(nameString.toString(), keyString.toString(), this))
+                Singleton.setEntries(entries)
+                Singleton.setWrapper(wrapper)
                 val intent = Intent(this, ListViewActivity::class.java)
-                intent.putExtra("wrapper",wrapper)
-                intent.putExtra("entries",entries)
                 startActivity(intent)
             } else {
                 key.setTextColor(Color.RED)

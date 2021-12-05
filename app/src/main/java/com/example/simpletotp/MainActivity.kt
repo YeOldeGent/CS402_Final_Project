@@ -1,23 +1,17 @@
 package com.example.simpletotp
 
 import android.content.DialogInterface
-
-import android.content.Context
 import android.content.Intent
-
-import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
-import android.widget.ImageButton
-import android.widget.TextView
-import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import com.example.simpletotp.totp.TOTPWrapper
+import java.io.Serializable
 import java.security.InvalidParameterException
-import java.time.Instant
+
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -34,11 +28,10 @@ class MainActivity : AppCompatActivity() {
         println(pin)
         try {
             totp = TOTPWrapper(pin, this)
-            var safeTOTPEntries = totp.readEntries(this)
+            Singleton.setWrapper(totp)
+            Singleton.setEntries(totp.readEntries(this))
 
             val intent = Intent(this, ListViewActivity::class.java)
-            intent.putExtra("wrapper",totp)
-            intent.putExtra("entries",safeTOTPEntries)
             startActivity(intent)
 
         }catch (e: InvalidParameterException){
