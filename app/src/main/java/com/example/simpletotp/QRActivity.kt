@@ -23,9 +23,12 @@ import com.example.simpletotp.totp.SafeTOTPEntry
 import com.example.simpletotp.totp.TOTPWrapper
 import java.util.jar.Manifest
 
-class QRActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>) : AppCompatActivity() {
+class QRActivity : AppCompatActivity() {
 
     private lateinit var codescanner: CodeScanner
+
+    val wrapper = intent.getSerializableExtra("wrapper") as TOTPWrapper
+    val entries = intent.getSerializableExtra("entries") as ArrayList<SafeTOTPEntry>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,7 +63,9 @@ class QRActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>
             skipDialog.setMessage("Do you want to skip the scanner and manually input a key?")
             //if the press 'Yes', they will be brought to the add entry screen with two blank boxes
             skipDialog.setPositiveButton("Yes", DialogInterface.OnClickListener { dialog, which ->
-                val intent = Intent(this, NewEntryActivity(wrapper, entries)::class.java)
+                val intent = Intent(this, NewEntryActivity::class.java)
+                intent.putExtra("wrapper",wrapper)
+                intent.putExtra("entries",entries)
                 intent.putExtra("KEY","")
                 startActivity(intent)
             })
@@ -77,7 +82,9 @@ class QRActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>
             cancelDialog.setMessage("Do you want to go back to the list of entries?")
             //if the press 'Yes', they will be brought to the add entry screen with two blank boxes
             cancelDialog.setPositiveButton("Yes", DialogInterface.OnClickListener { dialog, which ->
-                val intent = Intent(this, MainActivity::class.java)
+                val intent = Intent(this, ListViewActivity::class.java)
+                intent.putExtra("wrapper",wrapper)
+                intent.putExtra("entries",entries)
                 startActivity(intent)
             })
             //if the press 'Cancel', they can continue scanning as normal
@@ -89,7 +96,9 @@ class QRActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>
         codescanner.decodeCallback = DecodeCallback {
             runOnUiThread {
                 Toast.makeText(this, "Scan Result: ${it.text}", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, NewEntryActivity(wrapper, entries)::class.java)
+                val intent = Intent(this, NewEntryActivity::class.java)
+                intent.putExtra("wrapper",wrapper)
+                intent.putExtra("entries",entries)
                 intent.putExtra("KEY",it.text)
                 startActivity(intent)
             }

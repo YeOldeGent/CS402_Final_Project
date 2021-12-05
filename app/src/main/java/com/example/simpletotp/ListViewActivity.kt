@@ -1,5 +1,6 @@
 package com.example.simpletotp
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
@@ -8,12 +9,17 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.simpletotp.ListAdapter
 import com.example.simpletotp.R
+import com.example.simpletotp.totp.SafeTOTPEntry
+import com.example.simpletotp.totp.TOTPWrapper
 
 class ListViewActivity : AppCompatActivity() {
     private lateinit var kRecyclerView: RecyclerView
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_list_view)
+
+        val wrapper = intent.getSerializableExtra("wrapper") as TOTPWrapper
+        val entries = intent.getSerializableExtra("entries") as ArrayList<SafeTOTPEntry>
 
         var counter = 0
         val itemList = arrayListOf<String>("Arabic", "Robusta","Sumatra","Kona")
@@ -33,6 +39,13 @@ class ListViewActivity : AppCompatActivity() {
          * arrays and kadapter
          */
         fun addItem(newItem: String){
+            val intent = Intent(this, QRActivity::class.java)
+            intent.putExtra("wrapper",wrapper)
+            intent.putExtra("entries",entries)
+            startActivity(intent)
+            entries.forEach {
+                print(it)
+            }
             counter += 1
             scoffee.add(false)
             itemList.add(newItem)

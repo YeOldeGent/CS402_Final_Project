@@ -33,10 +33,13 @@ class MainActivity : AppCompatActivity() {
         val pin = findViewById<EditText>(R.id.pinText).text.toString()
         println(pin)
         try {
-            totp = TOTPWrapper(pin)
+            totp = TOTPWrapper(pin, this)
+            var safeTOTPEntries = totp.readEntries(this)
 
-                val intent = Intent(this, ListViewActivity::class.java)
-                startActivity(intent)
+            val intent = Intent(this, ListViewActivity::class.java)
+            intent.putExtra("wrapper",totp)
+            intent.putExtra("entries",safeTOTPEntries)
+            startActivity(intent)
 
         }catch (e: InvalidParameterException){
             val dialogBuilder = AlertDialog.Builder(this)

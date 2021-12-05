@@ -12,7 +12,11 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.simpletotp.totp.SafeTOTPEntry
 import com.example.simpletotp.totp.TOTPWrapper
 
-class NewEntryActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>) : AppCompatActivity() {
+class NewEntryActivity : AppCompatActivity() {
+
+    val wrapper = intent.getSerializableExtra("wrapper") as TOTPWrapper
+    val entries = intent.getSerializableExtra("entries") as ArrayList<SafeTOTPEntry>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_newentry)
@@ -37,7 +41,9 @@ class NewEntryActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTP
                 error.text = "Please enter a name!!"
             } else if (key.text.length == 40 || key.text.length == 64 || key.text.length == 128) {
                 entries.add(wrapper.createEntry(nameString.toString(), keyString.toString(), this))
-                val intent = Intent(this, MainActivity::class.java)
+                val intent = Intent(this, ListViewActivity::class.java)
+                intent.putExtra("wrapper",wrapper)
+                intent.putExtra("entries",entries)
                 startActivity(intent)
             } else {
                 key.setTextColor(Color.RED)

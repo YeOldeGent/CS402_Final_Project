@@ -54,7 +54,7 @@ public class ListAdapter(context: Context, var coffee: ArrayList<String>, var sc
 
         override fun onClick(v: View) {
             //toggle selection
-            var apos = getBindingAdapterPosition()
+            var apos = bindingAdapterPosition
             kSelect = scoffee[apos]
             kSelect = !kSelect
             scoffee[apos] = kSelect
