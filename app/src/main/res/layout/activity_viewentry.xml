@@ -5,14 +5,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <EditText
-        android:id="@+id/editTextName"
+    <TextView
+        android:id="@+id/textViewName"
         android:layout_width="360dp"
         android:layout_height="48dp"
         android:layout_marginTop="16dp"
         android:backgroundTint="@color/black"
         android:ems="10"
-        android:hint="Edit name here"
+        android:text="Entry Name"
+        android:textSize="30dp"
+        android:textAlignment="center"
         android:minHeight="48dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -28,17 +30,18 @@
         android:minHeight="48dp"
         android:text="1234565"
         android:textSize="30dp"
-        app:layout_constraintEnd_toEndOf="@+id/editTextName"
+        android:textAlignment="center"
+        app:layout_constraintEnd_toEndOf="@+id/textViewName"
         app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toStartOf="@+id/editTextName"
-        app:layout_constraintTop_toBottomOf="@+id/editTextName" />
+        app:layout_constraintStart_toStartOf="@+id/textViewName"
+        app:layout_constraintTop_toBottomOf="@+id/textViewName" />
 
     <Button
-        android:id="@+id/saveButton"
+        android:id="@+id/changeButton"
         android:layout_width="165dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
-        android:text="Save Changes"
+        android:text="Change Name"
         app:layout_constraintEnd_toStartOf="@+id/copyButton"
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="@+id/textViewCode"
@@ -72,7 +75,7 @@
         android:text="Done"
         app:layout_constraintEnd_toEndOf="@+id/copyButton"
         app:layout_constraintHorizontal_bias="0.496"
-        app:layout_constraintStart_toStartOf="@+id/saveButton"
+        app:layout_constraintStart_toStartOf="@+id/changeButton"
         app:layout_constraintTop_toBottomOf="@+id/timer" />
 
     <Button
@@ -84,7 +87,18 @@
         android:text="Delete Entry"
         app:layout_constraintEnd_toEndOf="@+id/copyButton"
         app:layout_constraintHorizontal_bias="0.496"
-        app:layout_constraintStart_toStartOf="@+id/saveButton"
+        app:layout_constraintStart_toStartOf="@+id/changeButton"
         app:layout_constraintTop_toBottomOf="@+id/doneButton" />
+
+    <CheckBox
+        android:id="@+id/favoriteCheck"
+        android:layout_width="91dp"
+        android:layout_height="37dp"
+        android:layout_marginTop="28dp"
+        android:text="Favorite"
+        app:layout_constraintEnd_toEndOf="@+id/copyButton"
+        app:layout_constraintHorizontal_bias="0.507"
+        app:layout_constraintStart_toStartOf="@+id/changeButton"
+        app:layout_constraintTop_toBottomOf="@+id/copyButton" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -9,15 +9,16 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import com.example.simpletotp.totp.SafeTOTPEntry
 import com.example.simpletotp.totp.TOTPWrapper
 
-class NewEntryActivity(val wrapper: TOTPWrapper) : AppCompatActivity() {
+class NewEntryActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>) : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_newentry)
 
         //get all the elements from the xml file
-        val name = findViewById<EditText>(R.id.editTextName)
+        val name = findViewById<EditText>(R.id.textViewName)
         val key = findViewById<EditText>(R.id.editTextKey)
         val error = findViewById<TextView>(R.id.errorText)
         val submit: Button = findViewById(R.id.submit)
@@ -35,7 +36,7 @@ class NewEntryActivity(val wrapper: TOTPWrapper) : AppCompatActivity() {
             if (name.text.length == 0) {
                 error.text = "Please enter a name!!"
             } else if (key.text.length == 40 || key.text.length == 64 || key.text.length == 128) {
-                wrapper.createEntry(nameString.toString(), keyString.toString(), this)
+                entries.add(wrapper.createEntry(nameString.toString(), keyString.toString(), this))
                 val intent = Intent(this, MainActivity::class.java)
                 startActivity(intent)
             } else {
