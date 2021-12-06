@@ -33,7 +33,7 @@ class ViewEntryActivity : AppCompatActivity() {
         val name = entry.name
 
         //get all the layout elements
-        val nameEdit = findViewById<EditText>(R.id.textViewName)
+        val nameText = findViewById<TextView>(R.id.textViewName)
         val code = findViewById<TextView>(R.id.textViewCode)
         val timer = findViewById<TextView>(R.id.timer)
         val changeButton = findViewById<Button>(R.id.changeButton)
@@ -45,7 +45,7 @@ class ViewEntryActivity : AppCompatActivity() {
         favoriteCheck.isChecked = entry.favorite
 
         //set the name text box
-        nameEdit.setText(name)
+        nameText.setText(name)
 
         //get the code and set the text view
         var wrapper = Singleton.globalWrapper() as TOTPWrapper
@@ -69,6 +69,7 @@ class ViewEntryActivity : AppCompatActivity() {
                 wrapper.updateEntry(entry, this)
                 Singleton.setEntries(entries)
                 Singleton.setWrapper(wrapper)
+                nameText.setText(input.text.toString())
             })
             editDialog.setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
             editDialog.show()
@@ -83,7 +84,7 @@ class ViewEntryActivity : AppCompatActivity() {
 
         //switch back to main
         doneButton.setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java)
+            val intent = Intent(this, ListViewActivity::class.java)
             startActivity(intent)
         }
 
@@ -100,7 +101,7 @@ class ViewEntryActivity : AppCompatActivity() {
                 wrapper.deleteEntry(entry, this)
                 Singleton.setEntries(wrapper.readEntries(this))
                 Singleton.setWrapper(wrapper)
-                val intent = Intent(this, MainActivity::class.java)
+                val intent = Intent(this, ListViewActivity::class.java)
                 startActivity(intent)
             })
             //if the press 'Cancel', they can continue editing/viewing the entry
