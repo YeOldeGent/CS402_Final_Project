@@ -99,7 +99,8 @@ class ViewEntryActivity : AppCompatActivity() {
                 entries = Singleton.globalEntries() as ArrayList<SafeTOTPEntry>
                 wrapper = Singleton.globalWrapper() as TOTPWrapper
                 wrapper.deleteEntry(entry, this)
-                Singleton.setEntries(wrapper.readEntries(this))
+                entries.remove(entry)
+                Singleton.setEntries(entries)
                 Singleton.setWrapper(wrapper)
                 val intent = Intent(this, ListViewActivity::class.java)
                 startActivity(intent)
@@ -118,7 +119,7 @@ class ViewEntryActivity : AppCompatActivity() {
                 entry.favorite = false
                 wrapper.updateEntry(entry, this)
             }
-            Singleton.setEntries(wrapper.readEntries(this))
+            Singleton.setEntries(entries)
             Singleton.setWrapper(wrapper)
         }
 
