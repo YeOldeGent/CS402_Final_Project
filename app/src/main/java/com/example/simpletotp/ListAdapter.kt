@@ -1,13 +1,13 @@
 package com.example.simpletotp
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-
 
 
 public class ListAdapter(context: Context, var coffee: ArrayList<String>, var scoffee: ArrayList<Boolean> )
@@ -58,6 +58,11 @@ public class ListAdapter(context: Context, var coffee: ArrayList<String>, var sc
             kSelect = scoffee[apos]
             kSelect = !kSelect
             scoffee[apos] = kSelect
+
+            var context = v.getContext()
+            val intent = Intent(context, ViewEntryActivity::class.java)
+            intent.putExtra("POS",0)
+            context.startActivity(intent)
 
             var sscolor = "#ffffff"
             if (kSelect) {

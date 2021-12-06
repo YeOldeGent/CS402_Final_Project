@@ -18,11 +18,15 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 
-class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : AppCompatActivity() {
+class ViewEntryActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_viewentry)
+        var position = intent.getIntExtra("POS", -1)
+
+        var entries = Singleton.globalEntries() as ArrayList<SafeTOTPEntry>
+        var entry = entries.get(position)
 
         //save off the id and name for easy use
         val id = entry.id
@@ -32,7 +36,7 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
         val nameEdit = findViewById<EditText>(R.id.textViewName)
         val code = findViewById<TextView>(R.id.textViewCode)
         val timer = findViewById<TextView>(R.id.timer)
-        val saveButton = findViewById<Button>(R.id.changeButton)
+        val changeButton = findViewById<Button>(R.id.changeButton)
         val copyButton = findViewById<Button>(R.id.copyButton)
         val doneButton = findViewById<Button>(R.id.doneButton)
         val deleteButton = findViewById<Button>(R.id.deleteButton)
@@ -40,21 +44,18 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
 
         favoriteCheck.isChecked = entry.favorite
 
-        //make it so they can click the save button right away
-        saveButton.setBackgroundColor(Color.DKGRAY)
-        saveButton.isClickable = false
-
         //set the name text box
         nameEdit.setText(name)
 
         //get the code and set the text view
+        var wrapper = Singleton.globalWrapper() as TOTPWrapper
         code.setText(wrapper.getTOTPcode(id))
 
         //start the timer, pass in the timer, code, and entry id
         newTimer(timer, code, id)
 
         //when you click save, save off the new name and disable the button again
-        saveButton.setOnClickListener {
+        changeButton.setOnClickListener {
             val editDialog: android.app.AlertDialog.Builder = android.app.AlertDialog.Builder(this)
             editDialog.setTitle("Edit Name")
             val input = EditText(this)
@@ -62,8 +63,12 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
             input.inputType = InputType.TYPE_CLASS_TEXT
             editDialog.setView(input)
             editDialog.setPositiveButton("OK", DialogInterface.OnClickListener { dialog, which ->
+                entries = Singleton.globalEntries() as ArrayList<SafeTOTPEntry>
+                wrapper = Singleton.globalWrapper() as TOTPWrapper
                 entry.name = input.text.toString()
                 wrapper.updateEntry(entry, this)
+                Singleton.setEntries(entries)
+                Singleton.setWrapper(wrapper)
             })
             editDialog.setNegativeButton("Cancel", DialogInterface.OnClickListener { dialog, which -> dialog.cancel() })
             editDialog.show()
@@ -90,7 +95,11 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
             delDialog.setMessage("Do you want delete this entry?")
             //if the press 'Yes', the entry will be removed and they will be brought back to the list
             delDialog.setPositiveButton("Yes", DialogInterface.OnClickListener { dialog, which ->
+                entries = Singleton.globalEntries() as ArrayList<SafeTOTPEntry>
+                wrapper = Singleton.globalWrapper() as TOTPWrapper
                 wrapper.deleteEntry(entry, this)
+                Singleton.setEntries(wrapper.readEntries(this))
+                Singleton.setWrapper(wrapper)
                 val intent = Intent(this, MainActivity::class.java)
                 startActivity(intent)
             })
@@ -100,6 +109,7 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
         }
 
         favoriteCheck.setOnCheckedChangeListener { buttonView, isChecked ->
+            wrapper = Singleton.globalWrapper() as TOTPWrapper
             if (isChecked) {
                 entry.favorite = true
                 wrapper.updateEntry(entry, this)
@@ -107,6 +117,8 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
                 entry.favorite = false
                 wrapper.updateEntry(entry, this)
             }
+            Singleton.setEntries(wrapper.readEntries(this))
+            Singleton.setWrapper(wrapper)
         }
 
     }
@@ -124,6 +136,7 @@ class ViewEntryActivity(val wrapper: TOTPWrapper, val entry: SafeTOTPEntry) : Ap
 
             //when the timer finished, create a new code, then a new timer
             override fun onFinish() {
+                var wrapper = Singleton.globalWrapper() as TOTPWrapper
                 code.setText(wrapper.getTOTPcode(id))
                 newTimer(timer, code, id)
             }
