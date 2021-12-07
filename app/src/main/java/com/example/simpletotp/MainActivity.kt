@@ -8,6 +8,7 @@ import android.widget.Button
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.example.simpletotp.totp.TOTP
 import com.example.simpletotp.totp.TOTPWrapper
 import java.io.Serializable
 import java.security.InvalidParameterException
@@ -17,6 +18,25 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+    }
+
+    fun totpTesting(wrapper: TOTPWrapper) {
+        val now = System.currentTimeMillis().toString().substring(0, 10).toLong()
+        val x: Long = 30
+        val t: Long = now / x
+        var steps = t.toULong().toString(16).uppercase()
+        while (steps.length < 16)
+            steps = "0$steps"
+        println(
+            "TOTP CODE: ${
+                TOTP.generateTOTP(
+                    "4A4653473234324F4D5644475352324B4C46515843514C514F4E4C5853515251",
+                    steps,
+                    "6",
+                    "HmacSHA256"
+                )
+            }"
+        )
     }
 
     fun testTOTP(view: View) {
@@ -30,11 +50,12 @@ class MainActivity : AppCompatActivity() {
             totp = TOTPWrapper(pin, this)
             Singleton.setWrapper(totp)
             Singleton.setEntries(totp.readEntries(this))
+            totpTesting(totp)
 
             val intent = Intent(this, ListViewActivity::class.java)
             startActivity(intent)
 
-        }catch (e: InvalidParameterException){
+        } catch (e: InvalidParameterException) {
             val dialogBuilder = AlertDialog.Builder(this)
             dialogBuilder.setMessage("Wrong Pin")
             dialogBuilder.setPositiveButton("Yes", { dialogInterface: DialogInterface, i: Int -> })
@@ -42,22 +63,6 @@ class MainActivity : AppCompatActivity() {
             alertDialog.show()
         }
         println("Made it")
-
-        //TODO: Make the wrapper do something now
-
-
-        //val totp = TOTPWrapper("1234")
-//        val safeTOTPEntries = totp.getSafeEntries()
-//        safeTOTPEntries.add(
-//            totp.addEntry(
-//                "Name",
-//                "3132333435363738393031323334353637383930" + "3132333435363738393031323334353637383930"
-//                        + "3132333435363738393031323334353637383930" + "31323334"
-//            )
-//        )
-//        val now = System.currentTimeMillis().toString().substring(0, 10).toLong()
-//        println("TOTP code: " + totp.getTOTPcode(safeTOTPEntries[0].id, now))
-
     }
 
     private fun testDB() {

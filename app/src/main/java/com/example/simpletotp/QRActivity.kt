@@ -90,7 +90,12 @@ class QRActivity : AppCompatActivity() {
             runOnUiThread {
                 Toast.makeText(this, "Scan Result: ${it.text}", Toast.LENGTH_SHORT).show()
                 val intent = Intent(this, NewEntryActivity::class.java)
-                intent.putExtra("KEY",it.text)
+                val key = it.text.substringAfter("secret=").substringBefore("&")
+                intent.putExtra("KEY", key)
+                var name = it.text.substringAfter("issuer=")
+                if (name.contains("&"))
+                    name = name.substringBefore("&")
+                intent.putExtra("NAME", name)
                 startActivity(intent)
             }
         }
