@@ -19,8 +19,13 @@ class ListViewActivity : AppCompatActivity() {
         setContentView(R.layout.activity_list_view)
 
         var counter = 0
-        val itemList = arrayListOf<String>("Arabic", "Robusta","Sumatra","Kona")
-        val scoffee = arrayListOf<Boolean>(false, false, false, false)
+        val itemList = arrayListOf<String>()
+        val scoffee = arrayListOf<Boolean>()
+        var entries = Singleton.globalEntries() as ArrayList<SafeTOTPEntry>
+        for (entry in entries) {
+            itemList.add(entry.name)
+            scoffee.add(false)
+        }
         //Creates the view
         kRecyclerView =
             findViewById(R.id.recyclerView) as RecyclerView
@@ -35,13 +40,11 @@ class ListViewActivity : AppCompatActivity() {
          * Adds an item to the list and updates the
          * arrays and kadapter
          */
-        fun addItem(newItem: String){
+        fun addItem(){
             val intent = Intent(this, QRActivity::class.java)
             startActivity(intent)
             Singleton.printEntries()
             counter += 1
-            scoffee.add(false)
-            itemList.add(newItem)
             kadapter.notifyDataSetChanged()
         }
 
@@ -58,7 +61,7 @@ class ListViewActivity : AppCompatActivity() {
         val addButton: Button = findViewById(R.id.addButton)
         // set on-click listener
         addButton.setOnClickListener {
-            addItem("New item " + counter)
+            addItem()
         }
 
 //        val deleteButton: Button = findViewById(R.id.deleteButton)
