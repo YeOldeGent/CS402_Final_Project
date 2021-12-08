@@ -54,14 +54,14 @@ public class ListAdapter(context: Context, var coffee: ArrayList<String>, var sc
 
         override fun onClick(v: View) {
             //toggle selection
-            var apos = bindingAdapterPosition
+            var apos = adapterPosition
             kSelect = scoffee[apos]
             kSelect = !kSelect
             scoffee[apos] = kSelect
 
             var context = v.getContext()
             val intent = Intent(context, ViewEntryActivity::class.java)
-            intent.putExtra("POS",0)
+            intent.putExtra("POS",apos)
             context.startActivity(intent)
 
             var sscolor = "#ffffff"
