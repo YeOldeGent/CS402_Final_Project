@@ -2,9 +2,6 @@ package com.example.simpletotp
 
 import android.graphics.Color
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.simpletotp.totp.TOTPWrapper
 import android.content.*
@@ -12,7 +9,7 @@ import android.content.*
 import com.example.simpletotp.totp.SafeTOTPEntry
 import android.os.CountDownTimer
 import android.text.InputType
-import android.widget.CheckBox
+import android.widget.*
 import com.example.simpletotp.totp.TOTPWrapper.Companion.timeLeftInCode
 import java.text.SimpleDateFormat
 import java.util.*
@@ -79,6 +76,7 @@ class ViewEntryActivity : AppCompatActivity() {
         copyButton.setOnClickListener {
             val clipboard: ClipboardManager = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = ClipData.newPlainText("Copied Code!", code.text)
+            Toast.makeText(this, "Code copied to clipboard!", Toast.LENGTH_SHORT).show()
             clipboard.setPrimaryClip(clip)
         }
 
