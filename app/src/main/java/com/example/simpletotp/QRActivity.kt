@@ -23,7 +23,7 @@ import com.example.simpletotp.totp.SafeTOTPEntry
 import com.example.simpletotp.totp.TOTPWrapper
 import java.util.jar.Manifest
 
-class QRActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>) : AppCompatActivity() {
+class QRActivity : AppCompatActivity() {
 
     private lateinit var codescanner: CodeScanner
 
@@ -60,7 +60,7 @@ class QRActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>
             skipDialog.setMessage("Do you want to skip the scanner and manually input a key?")
             //if the press 'Yes', they will be brought to the add entry screen with two blank boxes
             skipDialog.setPositiveButton("Yes", DialogInterface.OnClickListener { dialog, which ->
-                val intent = Intent(this, NewEntryActivity(wrapper, entries)::class.java)
+                val intent = Intent(this, NewEntryActivity::class.java)
                 intent.putExtra("KEY","")
                 startActivity(intent)
             })
@@ -77,7 +77,7 @@ class QRActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>
             cancelDialog.setMessage("Do you want to go back to the list of entries?")
             //if the press 'Yes', they will be brought to the add entry screen with two blank boxes
             cancelDialog.setPositiveButton("Yes", DialogInterface.OnClickListener { dialog, which ->
-                val intent = Intent(this, MainActivity::class.java)
+                val intent = Intent(this, ListViewActivity::class.java)
                 startActivity(intent)
             })
             //if the press 'Cancel', they can continue scanning as normal
@@ -89,8 +89,13 @@ class QRActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>
         codescanner.decodeCallback = DecodeCallback {
             runOnUiThread {
                 Toast.makeText(this, "Scan Result: ${it.text}", Toast.LENGTH_SHORT).show()
-                val intent = Intent(this, NewEntryActivity(wrapper, entries)::class.java)
-                intent.putExtra("KEY",it.text)
+                val intent = Intent(this, NewEntryActivity::class.java)
+                val key = it.text.substringAfter("secret=").substringBefore("&")
+                intent.putExtra("KEY", key)
+                var name = it.text.substringAfter("issuer=")
+                if (name.contains("&"))
+                    name = name.substringBefore("&")
+                intent.putExtra("NAME", name)
                 startActivity(intent)
             }
         }

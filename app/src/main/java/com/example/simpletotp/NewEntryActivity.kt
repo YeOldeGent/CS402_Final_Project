@@ -11,8 +11,11 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.example.simpletotp.totp.SafeTOTPEntry
 import com.example.simpletotp.totp.TOTPWrapper
+import java.security.InvalidParameterException
 
-class NewEntryActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTPEntry>) : AppCompatActivity() {
+class NewEntryActivity : AppCompatActivity() {
+
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_newentry)
@@ -25,6 +28,8 @@ class NewEntryActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTP
 
         //get the key from the QR scanner, set the text box to display it automatically
         key.setText(intent.getStringExtra("KEY"))
+        if (intent.hasExtra("NAME"))
+            name.setText(intent.getStringExtra("NAME"))
 
         //save off the inputted information
         var nameString = name.text
@@ -33,45 +38,63 @@ class NewEntryActivity(val wrapper: TOTPWrapper, val entries: ArrayList<SafeTOTP
         //when you push the button, make sure everything is the right format, if not, make the error text visible
         submit.setOnClickListener {
             error.text = ""
-            if (name.text.length == 0) {
+            if (name.text.isEmpty()) {
                 error.text = "Please enter a name!!"
-            } else if (key.text.length == 40 || key.text.length == 64 || key.text.length == 128) {
-                entries.add(wrapper.createEntry(nameString.toString(), keyString.toString(), this))
-                val intent = Intent(this, MainActivity::class.java)
-                startActivity(intent)
             } else {
-                key.setTextColor(Color.RED)
-                error.text = "Invalid code length!!"
+                val entries = Singleton.globalEntries() as ArrayList<SafeTOTPEntry>
+                val wrapper = Singleton.globalWrapper() as TOTPWrapper
+                while (true) {
+                    try {
+                        entries.add(
+                            wrapper.createEntry(
+                                nameString.toString(),
+                                keyString.toString(),
+                                this
+                            )
+                        )
+                        break
+                    } catch (e: InvalidParameterException) {
+                        key.setTextColor(Color.RED)
+                        error.text = "Invalid code length!"
+                    }
+                }
+                Singleton.setEntries(entries)
+                Singleton.setWrapper(wrapper)
+                val intent = Intent(this, ListViewActivity::class.java)
+                startActivity(intent)
             }
+
+            //if a user starts to edit the key text box, hide the error and change the color back to black
+            key.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
+
+                override fun onTextChanged(
+                    s: CharSequence, start: Int,
+                    before: Int, count: Int
+                ) {
+                    key.setTextColor(Color.BLACK)
+                    error.text = ""
+                    keyString = key.text
+                }
+
+                override fun afterTextChanged(p0: Editable?) {}
+            })
+
+            //if a user starts to edit the name, hide the error message
+            name.addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
+
+                override fun onTextChanged(
+                    s: CharSequence, start: Int,
+                    before: Int, count: Int
+                ) {
+                    error.text = ""
+                    nameString = name.text
+                }
+
+                override fun afterTextChanged(p0: Editable?) {}
+            })
+
         }
-
-        //if a user starts to edit the key text box, hide the error and change the color back to black
-        key.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
-
-            override fun onTextChanged(s: CharSequence, start: Int,
-                                       before: Int, count: Int) {
-                key.setTextColor(Color.BLACK)
-                error.text = ""
-                keyString = key.text
-            }
-
-            override fun afterTextChanged(p0: Editable?) {}
-        })
-
-        //if a user starts to edit the name, hide the error message
-        name.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(p0: CharSequence?, p1: Int, p2: Int, p3: Int) {}
-
-            override fun onTextChanged(s: CharSequence, start: Int,
-                                       before: Int, count: Int) {
-                error.text = ""
-                nameString = name.text
-            }
-
-            override fun afterTextChanged(p0: Editable?) {}
-        })
-
     }
-
 }

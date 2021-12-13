@@ -12,10 +12,10 @@
         android:layout_marginTop="16dp"
         android:backgroundTint="@color/black"
         android:ems="10"
-        android:text="Entry Name"
-        android:textSize="30dp"
-        android:textAlignment="center"
         android:minHeight="48dp"
+        android:text="Entry Name"
+        android:textAlignment="center"
+        android:textSize="30dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -29,8 +29,8 @@
         android:ems="10"
         android:minHeight="48dp"
         android:text="1234565"
-        android:textSize="30dp"
         android:textAlignment="center"
+        android:textSize="30dp"
         app:layout_constraintEnd_toEndOf="@+id/textViewName"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="@+id/textViewName"
@@ -71,24 +71,24 @@
         android:id="@+id/doneButton"
         android:layout_width="100dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="300dp"
+        android:layout_marginBottom="32dp"
         android:text="Done"
-        app:layout_constraintEnd_toEndOf="@+id/copyButton"
-        app:layout_constraintHorizontal_bias="0.496"
-        app:layout_constraintStart_toStartOf="@+id/changeButton"
-        app:layout_constraintTop_toBottomOf="@+id/timer" />
+        app:layout_constraintBottom_toTopOf="@+id/deleteButton"
+        app:layout_constraintEnd_toEndOf="@+id/deleteButton"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="@+id/deleteButton" />
 
     <Button
         android:id="@+id/deleteButton"
         android:layout_width="100dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="48dp"
+        android:layout_marginBottom="28dp"
         android:backgroundTint="#aa3333"
         android:text="Delete Entry"
-        app:layout_constraintEnd_toEndOf="@+id/copyButton"
-        app:layout_constraintHorizontal_bias="0.496"
-        app:layout_constraintStart_toStartOf="@+id/changeButton"
-        app:layout_constraintTop_toBottomOf="@+id/doneButton" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.498"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <CheckBox
         android:id="@+id/favoriteCheck"

@@ -4,9 +4,11 @@ import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
 import android.os.Build
-import androidx.annotation.RequiresApi
 import com.example.simpletotp.database.TOTPEntryHelper
+import org.apache.commons.codec.binary.Base32
+import org.apache.commons.codec.binary.Hex
 import java.io.FileNotFoundException
+import java.io.Serializable
 import java.security.InvalidKeyException
 import java.security.InvalidParameterException
 import java.security.MessageDigest
@@ -25,7 +27,7 @@ import kotlin.math.absoluteValue
  * This is an all in one class to contain the TOTP keys in one place. Handles everything from generating codes to storing and modifying keys on disk.
  * @param pin: pin used to encrypt/decrypt TOTP keys from the disk
  */
-class TOTPWrapper(private var pin: String, context: Context) {
+class TOTPWrapper(private var pin: String, context: Context) : Serializable {
     private val entries = ArrayList<TOTPEntry>()
     private val secretKey: SecretKey
     private val iv: IvParameterSpec
@@ -211,12 +213,7 @@ class TOTPWrapper(private var pin: String, context: Context) {
                 key,
                 System.currentTimeMillis().toString(),
                 name,
-                when (key.length) {
-                    40 -> "HmacSHA1"
-                    64 -> "HmacSHA256"
-                    128 -> "HmacSHA512"
-                    else -> throw InvalidParameterException("Invalid TOTP key")
-                }
+                "HmacSHA1"
             )
         )
         val newEntry = entries[entries.lastIndex]
@@ -402,7 +399,12 @@ class TOTPWrapper(private var pin: String, context: Context) {
         var steps = t.toULong().toString(16).uppercase()
         while (steps.length < 16)
             steps = "0$steps"
-        return TOTP.generateTOTP(entry.key, steps, "6", entry.crypto)
+        return TOTP.generateTOTP(
+            Hex.encodeHexString(Base32().decode(entry.key)),
+            steps,
+            "6",
+            entry.crypto
+        )
     }
 
     /**
