@@ -113,6 +113,8 @@ class ViewEntryActivity : AppCompatActivity() {
             if (isChecked) {
                 entry.favorite = true
                 wrapper.updateEntry(entry, this)
+                Singleton.setFavEntry(entry)
+
             } else {
                 entry.favorite = false
                 wrapper.updateEntry(entry, this)
