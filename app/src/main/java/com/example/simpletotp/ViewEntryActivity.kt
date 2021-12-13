@@ -118,8 +118,9 @@ class ViewEntryActivity : AppCompatActivity() {
             } else {
                 entry.favorite = false
                 wrapper.updateEntry(entry, this)
+                Singleton.removerFavEntry(entry)
             }
-            Singleton.setEntries(entries)
+            //Singleton.setEntries(entries)
             Singleton.setWrapper(wrapper)
         }
 
