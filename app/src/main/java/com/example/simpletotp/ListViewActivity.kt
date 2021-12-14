@@ -3,6 +3,7 @@ package com.example.simpletotp
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -58,7 +59,7 @@ class ListViewActivity : AppCompatActivity() {
         }
 
 
-        val addButton: Button = findViewById(R.id.addButton)
+        val addButton = findViewById<View>(R.id.addButton)
         // set on-click listener
         addButton.setOnClickListener {
             addItem()
