@@ -6,11 +6,14 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.example.simpletotp.totp.TOTP
 import com.example.simpletotp.totp.TOTPWrapper
+import java.io.FileNotFoundException
 import java.io.Serializable
+import java.security.InvalidKeyException
 import java.security.InvalidParameterException
 
 
@@ -55,12 +58,22 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, ListViewActivity::class.java)
             startActivity(intent)
 
-        } catch (e: InvalidParameterException) {
-            val dialogBuilder = AlertDialog.Builder(this)
-            dialogBuilder.setMessage("Wrong Pin")
-            dialogBuilder.setPositiveButton("Yes", { dialogInterface: DialogInterface, i: Int -> })
-            val alertDialog = dialogBuilder.create()
-            alertDialog.show()
+        } catch (e: Exception) {
+            when (e) {
+                is InvalidKeyException -> {
+                    val dialogBuilder = AlertDialog.Builder(this)
+                    dialogBuilder.setMessage("Wrong Pin")
+                    dialogBuilder.setPositiveButton("Yes", { dialogInterface: DialogInterface, i: Int -> })
+                    val alertDialog = dialogBuilder.create()
+                    alertDialog.show()
+                } is FileNotFoundException -> {
+                    val dialogBuilder = AlertDialog.Builder(this)
+                    dialogBuilder.setMessage("Database error: If issue persists, please try reinstalling")
+                    dialogBuilder.setPositiveButton("Yes", { dialogInterface: DialogInterface, i: Int -> })
+                    val alertDialog = dialogBuilder.create()
+                    alertDialog.show()
+                }
+            }
         }
         println("Made it")
     }
