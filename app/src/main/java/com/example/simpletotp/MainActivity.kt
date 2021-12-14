@@ -37,15 +37,21 @@ class MainActivity : AppCompatActivity() {
             when (e) {
                 is InvalidKeyException -> {
                     val dialogBuilder = AlertDialog.Builder(this)
-                    dialogBuilder.setMessage("Clear app data to reset pin")
+                    dialogBuilder.setMessage("If you have forgotten your pin, you must clear app data to reset pin.")
                     dialogBuilder.setTitle("Wrong pin")
-                    dialogBuilder.setPositiveButton("Ok", { dialogInterface: DialogInterface, i: Int -> })
+                    dialogBuilder.setPositiveButton(
+                        "Ok",
+                        { dialogInterface: DialogInterface, i: Int -> })
                     val alertDialog = dialogBuilder.create()
                     alertDialog.show()
-                } is FileNotFoundException -> {
+                }
+                is FileNotFoundException -> {
                     val dialogBuilder = AlertDialog.Builder(this)
-                    dialogBuilder.setMessage("Database error: If issue persists, please try reinstalling")
-                    dialogBuilder.setPositiveButton("Ok", { dialogInterface: DialogInterface, i: Int -> })
+                    dialogBuilder.setTitle("Database error")
+                    dialogBuilder.setMessage("If issue persists, please try clearing app data")
+                    dialogBuilder.setPositiveButton(
+                        "Ok",
+                        { dialogInterface: DialogInterface, i: Int -> })
                     val alertDialog = dialogBuilder.create()
                     alertDialog.show()
                 }
