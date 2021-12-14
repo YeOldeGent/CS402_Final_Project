@@ -208,7 +208,7 @@ class TOTPWrapper(private var pin: String, context: Context) : Serializable {
     fun createEntry(name: String, key: String, context: Context): SafeTOTPEntry {
         entries.add(
             TOTPEntry(
-                key,
+                encrypt(key),
                 System.currentTimeMillis().toString(),
                 name,
                 "HmacSHA1"
@@ -234,7 +234,7 @@ class TOTPWrapper(private var pin: String, context: Context) : Serializable {
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
             put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID, encrypt(entry.id))
-            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE, encrypt(entry.key))
+            put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE, entry.key)
             put(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE, encrypt(entry.name))
             put(
                 TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE,
@@ -287,7 +287,7 @@ class TOTPWrapper(private var pin: String, context: Context) : Serializable {
             while (moveToNext())
                 entries.add(
                     TOTPEntry(
-                        decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE))),
+                        getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_KEY_TITLE)),
                         decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_ID))),
                         decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_NAME_TITLE))),
                         decrypt(getString(getColumnIndexOrThrow(TOTPEntryHelper.TOTPEntryContract.TOTPEntry.COLUMN_CRYPTO_TITLE))),
@@ -398,7 +398,7 @@ class TOTPWrapper(private var pin: String, context: Context) : Serializable {
         while (steps.length < 16)
             steps = "0$steps"
         return TOTP.generateTOTP(
-            Hex.encodeHexString(Base32().decode(entry.key)),
+            Hex.encodeHexString(Base32().decode(decrypt(entry.key))),
             steps,
             "6",
             entry.crypto
