@@ -29,7 +29,7 @@
         android:layout_height="wrap_content"
         android:text="Submit"
         android:layout_gravity="center"
-        android:onClick="testTOTP"
+        android:onClick="initPin"
         />
 
 

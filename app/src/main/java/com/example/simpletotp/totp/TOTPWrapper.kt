@@ -104,7 +104,6 @@ class TOTPWrapper(private var pin: String, context: Context) : Serializable {
                 // ---- INIT CRYPTO END ----
                 if (hashString("SHA-256", secretKey.encoded.decodeToString()) != secretKeyHash)
                     throw InvalidKeyException("Incorrect pin")
-                println("CORRECT PIN")
             }
             // ========READ ALL DB ENTRIES========
             dbReadAll(context)
@@ -146,7 +145,6 @@ class TOTPWrapper(private var pin: String, context: Context) : Serializable {
         ivString: String,
         salt: String
     ): Boolean {
-        println("SAVING KEYS")
         val dbHelper = TOTPEntryHelper(context)
         val db = dbHelper.writableDatabase
         db.execSQL(TOTPEntryHelper.KeysContract.SQL_DELETE_KEYS)
